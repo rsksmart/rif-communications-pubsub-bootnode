@@ -21,7 +21,7 @@
     "lib",
     "types"
   ],
-  "main": "src/index.ts",
+  "main": "lib/index.js",
   "repository": "https://github.com/rsksmart/rif-communications-pubsub-node",
   "scripts": {
     "compile": "tasegir compile",
