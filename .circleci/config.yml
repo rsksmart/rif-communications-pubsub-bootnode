@@ -1,0 +1,106 @@
+version: 2.1
+
+commands:
+  install-deps:
+    steps:
+      - run:
+          name: "Install deps"
+          command: npm ci
+
+jobs:
+  check:
+    parameters:
+      cache:
+        type: boolean
+        default: true
+    docker:
+      - image: circleci/node:10
+    steps:
+      - checkout
+      - when:
+          condition: <<parameters.cache>>
+          steps:
+            - restore_cache:
+                keys:
+                  # when lock file changes, use increasingly general patterns to restore cache
+                  - node-10-{{ .Branch }}-{{ checksum "package-lock.json" }}
+                  - node-10-{{ .Branch }}-
+                  - node-10-
+      - install-deps
+      - when:
+          condition: <<parameters.cache>>
+          steps:
+            - save_cache:
+                paths:
+                  - ./node_modules
+                key: node-10-{{ .Branch }}-{{ checksum "package-lock.json" }}
+      - run:
+          name: "Commit linting"
+          command: |
+            git config --global user.email "you@example.com"
+            git config --global user.name "Your Name"
+            npx tasegir commitlint --circleci
+      - run:
+          name: "Dependency check"
+          command: npx tasegir dep-check
+      - run:
+          name: "Code linting"
+          command: npx tasegir lint
+      - run:
+          name: "Types check"
+          command: npx tasegir types-check
+
+  node-tests:
+    parameters:
+      version:
+        type: string
+      cache:
+        type: boolean
+        default: true
+    docker:
+      - image: circleci/node:<< parameters.version >>
+    steps:
+      - checkout
+      - when:
+          condition: <<parameters.cache>>
+          steps:
+            - restore_cache:
+                keys:
+                  # when lock file changes, use increasingly general patterns to restore cache
+                  - node-<< parameters.version >>-{{ .Branch }}-{{ checksum "package-lock.json" }}
+                  - node-<< parameters.version >>-{{ .Branch }}-
+                  - node-<< parameters.version >>-
+      - install-deps
+      - when:
+          condition: <<parameters.cache>>
+          steps:
+            - save_cache:
+                paths:
+                  - ./node_modules
+                key: node-<< parameters.version >>-{{ .Branch }}-{{ checksum "package-lock.json" }}
+      - run:
+          name: "Unit tests"
+          command: npx tasegir test --target node --files ./test/unit/*.spec.ts --reporter lcovonly -- --bail
+      - run:
+          name: "Integration tests"
+          command: npx tasegir test --target node --files ./test/integration/*.spec.ts --reporter lcovonly -- --bail
+
+workflows:
+  test:
+    jobs:
+      - check
+      # - node-tests:
+      #     version: '10'
+      #     name: node-10
+      #     requires:
+      #       - check
+      # - node-tests:
+      #     version: '12'
+      #     name: node-12
+      #     requires:
+      #       - check
+      # - node-tests:
+      #     version: '14'
+      #     name: node-14
+      #     requires:
+      #       - check

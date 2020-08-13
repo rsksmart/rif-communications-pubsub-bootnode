@@ -1,0 +1,55 @@
+{
+  "name": "@rsksmart/rif-communications-pubsub-node",
+  "version": "0.1.0-dev",
+  "description": "Node using the PubSub module",
+  "keywords": [
+    "RIF",
+    "Communications",
+    "PubSub"
+  ],
+  "homepage": "https://github.com/rsksmart/rif-communications-pubsub-node#readme",
+  "bugs": {
+    "url": "https://github.com/rsksmart/rif-communications-pubsub-node/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Vojtech Simetka",
+    "email": "vojtech@simetka.cz"
+  },
+  "files": [
+    "dist",
+    "lib",
+    "types"
+  ],
+  "main": "src/index.ts",
+  "repository": "https://github.com/rsksmart/rif-communications-pubsub-node",
+  "scripts": {
+    "compile": "tasegir compile",
+    "compile:watch": "tasegir compile -- --watch",
+    "types-check": "tasegir types-check",
+    "exec": "tasegir run ./src/index.ts --watch",
+    "lint": "tasegir lint",
+    "release": "tasegir release",
+    "build": "tasegir build",
+    "tasegir:link": "ln -s ./node_modules/tasegir/src/config/tsconfig.json ./tsconfig.json && ln -s ./node_modules/tasegir/src/config/eslintrc.js ./.eslintrc.js"
+  },
+  "dependencies": {
+    "@rsksmart/rif-communications-pubsub": "0.1.0-dev.3",
+    "config": "^3.3.1",
+    "peer-id": "^0.14.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.12",
+    "@types/mocha": "^8.0.2",
+    "chai": "^4.2.0",
+    "tasegir": "^1.8.0"
+  },
+  "engines": {
+    "node": ">=10.0.0",
+    "npm": ">=6.0.0"
+  },
+  "types": "types/index.d.ts",
+  "contributors": [
+    "Vojtech Simetka <vojtech@simetka.cz>"
+  ]
+}
