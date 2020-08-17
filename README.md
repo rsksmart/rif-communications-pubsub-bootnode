@@ -45,7 +45,7 @@ Spawns a new libp2p node with PeerId `QmbQJ4FyVBAar7rLwc1jjeJ6Nba6w2ddqczamJL6vT
 
 ## Config
 
-In `./config`. You can switch between configurations by setting `NODE_ENV` variable
+In `./config`. You can switch between configurations by setting `NODE_ENV` variable. Local configuration is good to put to `local.json5` file. For configuration mechanism please visit the [node-config](https://github.com/lorenwest/node-config/) page.
 
 ```JSON5
 // Libp2p config
