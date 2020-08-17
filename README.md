@@ -28,13 +28,13 @@ Example of usage:
 npm run exec
 ```
 
-Spawns a new libp2p node with new PeerId listening to TCP connections on system allocated port.
+Spawns a new libp2p node with new PeerId listening to TCP connections on port 6030.
 
 ```
 NODE_ENV=develop npm run exec
 ```
 
-Spawns a new libp2p node with PeerId `QmbQJ4FyVBAar7rLwc1jjeJ6Nba6w2ddqczamJL6vTDrwm` listening to websocket connections on system allocated port and joins rooms `0xtestroom` and `0xtestroom2`. Any peers joining and leaving the room will be logged as well as any messages in th following format:
+Spawns a new libp2p node with PeerId `QmbQJ4FyVBAar7rLwc1jjeJ6Nba6w2ddqczamJL6vTDrwm` listening to websocket connections on port 6030 and joins rooms `0xtestroom` and `0xtestroom2`. Any peers joining and leaving the room will be logged as well as any messages in th following format:
 
 ```
 <roomName>: peer <peerId> joined
