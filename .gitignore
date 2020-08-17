@@ -31,11 +31,5 @@ config/local.json5
 # Dependency directory
 node_modules
 
-# IPFS repos for development
-.repos
-
-db_test.sqlite
-
 .eslintrc.js
-.tsconfig.json
 tsconfig.json
