@@ -3,23 +3,35 @@
 import config from 'config'
 import { Room, createLibP2P } from '@rsksmart/rif-communications-pubsub'
 import PeerId from 'peer-id'
+import type Libp2p from 'libp2p'
 
 const isValidPeerId = (peerId: PeerId): boolean => {
   return (
     peerId.isValid() &&
-      Buffer.isBuffer(peerId.id) &&
-      Boolean(peerId.toB58String()) &&
-      Boolean(peerId.privKey) &&
-      Boolean(peerId.pubKey)
+    Buffer.isBuffer(peerId.id) &&
+    Boolean(peerId.toB58String()) &&
+    Boolean(peerId.privKey) &&
+    Boolean(peerId.pubKey)
   )
 }
 
 const main = async () => {
-  const cnfId = config.get('peerId') as {id: string, privKey: string, pubKey: string}
-  const peerId = await PeerId.createFromJSON(cnfId)
+  const libp2pConfig = config.get('libp2p') as Record<string, any>
 
-  const cnf = config.get('libp2p') as Record<string, any>
-  const libp2p = isValidPeerId(peerId) ? await createLibP2P({ ...cnf, peerId }) : await createLibP2P(cnf)
+  let libp2p: Libp2p
+
+  if (config.has('peerId')) {
+    const cnfId = config.get<{ id: string, privKey: string, pubKey: string }>('peerId')
+    const peerId = await PeerId.createFromJSON(cnfId)
+
+    if (!isValidPeerId(peerId)) {
+      throw new Error('Supplied PeerId is not valid!')
+    }
+
+    libp2p = await createLibP2P({ ...libp2pConfig, peerId })
+  } else {
+    libp2p = await createLibP2P(libp2pConfig)
+  }
 
   console.log('Node started, listening on addresses:')
   libp2p.multiaddrs.forEach((addr: any) => {
@@ -32,7 +44,7 @@ const main = async () => {
 
     room.on('peer:joined', (peer) => console.log(`${roomName}: peer ${peer} joined`))
     room.on('peer:left', (peer) => console.log(`${roomName}: peer ${peer} left`))
-    room.on('message', ({ from, data, to }) => console.log(`${roomName}: message ${JSON.stringify({ from, data: data?.toString(), to })}`))
+    room.on('message', (message) => console.log(`${roomName}: message\n`, message))
   })
 }
 

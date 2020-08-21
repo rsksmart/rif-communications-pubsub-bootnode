@@ -2,12 +2,20 @@
   // Libp2p config
   libp2p: {
     addresses: {
-      listen: ["/ip4/127.0.0.1/tcp/0"]
+      listen: [
+        "/ip4/127.0.0.1/tcp/0"
+      ]
+    },
+    config: {
+      peerDiscovery: {
+        bootstrap: {
+          enabled: false
+        }
+      }
     }
   },
   // Peer ID in a JSON format
   peerId: {},
-
   // Rooms to subscribe to, strings
   rooms: []
 }

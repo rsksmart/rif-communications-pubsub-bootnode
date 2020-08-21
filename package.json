@@ -27,19 +27,20 @@
     "compile": "tasegir compile",
     "compile:watch": "tasegir compile -- --watch",
     "types-check": "tasegir types-check",
-    "exec": "tasegir run ./src/index.ts --watch",
+    "exec": "tasegir run --watch ./src/index.ts",
     "lint": "tasegir lint",
     "release": "tasegir release",
     "build": "tasegir build",
     "tasegir:link": "ln -s ./node_modules/tasegir/src/config/tsconfig.json ./tsconfig.json && ln -s ./node_modules/tasegir/src/config/eslintrc.js ./.eslintrc.js"
   },
   "dependencies": {
-    "@rsksmart/rif-communications-pubsub": "0.1.0-dev.3",
+    "@rsksmart/rif-communications-pubsub": "0.1.0-dev.7",
     "config": "^3.3.1",
     "peer-id": "^0.14.0"
   },
   "devDependencies": {
     "@types/chai": "^4.2.12",
+    "@types/config": "0.0.36",
     "@types/mocha": "^8.0.2",
     "chai": "^4.2.0",
     "tasegir": "^1.8.0"
