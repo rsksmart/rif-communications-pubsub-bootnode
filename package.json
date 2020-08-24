@@ -17,6 +17,7 @@
     "email": "vojtech@simetka.cz"
   },
   "files": [
+    "config",
     "dist",
     "lib",
     "types"
