@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@rsksmart/rif-communications-pubsub": "0.1.0-dev.7",
+    "chalk": "^4.1.0",
     "config": "^3.3.1",
     "libp2p": "^0.28.10",
     "peer-id": "^0.14.0"
