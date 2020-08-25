@@ -1,7 +1,10 @@
 {
   libp2p: {
     addresses: {
-      listen: ["/ip4/127.0.0.1/tcp/6030/ws"]
+      listen: [
+        "/ip4/127.0.0.1/tcp/6030",
+        "/ip4/127.0.0.1/tcp/6031/ws"
+      ]
     }
   },
   peerId: {
