@@ -17,5 +17,9 @@
   // Peer ID in a JSON format
   peerId: {},
   // Rooms to subscribe to, strings
-  rooms: []
+  rooms: [],
+  // Port the GRPC server is listening to
+  grpcPort: 50051,
+  generatePeerWithSecp256k1Keys: true,
+  displayPeerId: true
 }

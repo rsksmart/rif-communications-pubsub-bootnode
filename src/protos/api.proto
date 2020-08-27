@@ -1,0 +1,57 @@
+syntax = "proto3";
+package communicationsapi;
+
+/*    subscribe(topic: string, onMessage: (message: Buffer) => void): void
+      unsubscribe(topic: string, onMessage: (message: Buffer) => void): void
+      publish(topic: string, message: Buffer): Promise<void>
+      getSubscribers(topic: string): Promise<[]>*/
+service CommunicationsApi {
+    //Server side stream, there's no need for a bidirectional stream, it's only needed so
+    //The client can be notified of events in their subscriptions
+    rpc PingChannel (NoParams) returns (Response);
+    rpc ConnectToCommunicationsNode(NoParams) returns (stream Notification);
+    rpc EndCommunication(NoParams) returns (Response);
+    //rpc CreateChannel (Channel) returns (Response);
+    rpc Publish (PublishPayload) returns (Response);
+    rpc Subscribe (Channel) returns (Response);
+    //rpc Unsubscribe (Channel) returns (Response);
+}
+
+message Channel {
+    string channelId = 1;
+}
+
+/*RPC needs a message, so when there are no params to send, this empty message is used*/
+message NoParams {}
+
+message Notification {
+    enum NotificationType {
+        INVITATION_TO_ROOM = 0;
+        INVITATION_TO_ROOM_RESPONSE = 1;
+        AUTHENTICATION_REQUEST = 2;
+        AUTHENTICATION_RESPONSE = 3;
+        NEW_MESSAGE = 4;
+        NEW_MESSAGE_RESPONSE = 5;
+    }
+    NotificationType type = 1;
+    string message = 2;
+}
+
+message Response {
+    bool success = 1;
+    string message = 2;
+}
+
+message PublishPayload {
+    string topic = 1;
+    bytes message = 2;
+}
+
+message Payload {
+    string from = 1;
+    optional string to = 2;
+    bytes data  = 3;
+    bytes seqno = 4;
+    repeated string topicIDs = 5;
+}
+

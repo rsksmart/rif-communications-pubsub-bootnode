@@ -29,16 +29,21 @@
     "compile:watch": "tasegir compile -- --watch",
     "types-check": "tasegir types-check",
     "exec": "tasegir run --watch ./src/index.ts",
+    "api-server": "tasegir run --watch ./src/api-server.ts",
+    "api-client": "tasegir run --watch ./src/api-client.ts ",
     "lint": "tasegir lint",
     "release": "tasegir release",
     "build": "tasegir build",
     "tasegir:link": "ln -s ./node_modules/tasegir/src/config/tsconfig.json ./tsconfig.json && ln -s ./node_modules/tasegir/src/config/eslintrc.js ./.eslintrc.js"
   },
   "dependencies": {
+    "@grpc/proto-loader": "^0.5.5",
     "@rsksmart/rif-communications-pubsub": "0.1.0-dev.8",
     "chalk": "^4.1.0",
     "config": "^3.3.1",
+    "grpc": "^1.24.3",
     "libp2p": "^0.28.10",
+    "libp2p-crypto-secp256k1": "^0.4.3",
     "peer-id": "^0.14.0"
   },
   "devDependencies": {
@@ -51,6 +56,7 @@
   },
   "types": "types/index.d.ts",
   "contributors": [
-    "Vojtech Simetka <vojtech@simetka.cz>"
+    "Vojtech Simetka <vojtech@simetka.cz>",
+    "Raul Laprida <raul@iovlabs.org>"
   ]
 }
