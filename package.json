@@ -39,11 +39,14 @@
   "dependencies": {
     "@grpc/proto-loader": "^0.5.5",
     "@rsksmart/rif-communications-pubsub": "0.1.0-dev.8",
+    "@types/node-forge": "^0.9.5",
     "chalk": "^4.1.0",
     "config": "^3.3.1",
     "grpc": "^1.24.3",
+    "key-encoder": "^2.0.3",
     "libp2p": "^0.28.10",
     "libp2p-crypto-secp256k1": "^0.4.3",
+    "node-forge": "^0.9.1",
     "peer-id": "^0.14.0"
   },
   "devDependencies": {

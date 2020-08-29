@@ -7,10 +7,17 @@ import chalk from 'chalk'
 import { inspect } from 'util'
 import type Libp2p from 'libp2p'
 
+import fs from 'fs'
+import KeyEncoder from 'key-encoder'
+const keyEncoder: KeyEncoder = new KeyEncoder('secp256k1')
+import cryptoS from 'libp2p-crypto'
+const secp256k1 = require('secp256k1')
+
+
 function isValidPeerId(peerId: PeerId): boolean {
     return (
         peerId.isValid() &&
-        Buffer.isBuffer(peerId.id) &&
+        (Buffer.isBuffer(peerId.id) || peerId.id instanceof Uint8Array) &&
         Boolean(peerId.toB58String()) &&
         Boolean(peerId.privKey) &&
         Boolean(peerId.pubKey)
@@ -87,7 +94,7 @@ function connectToCommunicationsNode(call: any) {
 */
 function subscribe(parameters: any, callback: any): void {
     console.log("SUBSCRIPTION");
-    const subscribed = subscribeToRoom(parameters.request.channelId, (message:string)=>{
+    const subscribed = subscribeToRoom(parameters.request.channelId, (message: string) => {
         console.log(`${parameters.request.channelId}: WE RECEIVED\n`, message);
     });
     let msg = `subscribed to ${parameters.request.channelId}`;
@@ -107,15 +114,31 @@ function subscribe(parameters: any, callback: any): void {
     rpc Publish (PublishPayload) returns (Response);
 */
 function publish(parameters: any, callback: any): void {
-    console.log("LALLALA");
     //TODO if there's no active stream the server should warn the user
-    console.log( `PUBLISHING TO ROOM  ${parameters.request.topic} the message "${parameters.request.message}"`)
+    console.log(`PUBLISHING TO ROOM  ${parameters.request.topic} the message "${parameters.request.message}"`)
     const published: boolean = publishToRoom(parameters.request.topic, parameters.request.message);
     let response = {
         success: published,
         message: ''
     }
     callback(null, response);
+
+}
+
+/*Implementation of protobuf service
+    rpc Unsubscribe (Channel) returns (Response);
+*/
+function unsubscribe(parameters: any, callback: any): void {
+
+    if (subscriptions.has(parameters.request.channelId)) {
+        let room: Room = subscriptions.get(parameters.request.channelId);
+        room.leave();
+        subscriptions.delete(parameters.request.channelId);
+        callback(null, { success: true, message: `${parameters.request.channelId} left` });
+    }
+    else {
+        callback(null, { success: false, message: `Peer was not subscribed to ${parameters.request.channelId}` });
+    }
 
 }
 
@@ -186,31 +209,66 @@ function publishToRoom(roomName: string, message: string): boolean {
     return published;
 }
 
+
 const main = async () => {
 
     const libp2pConfig = config.get('libp2p') as Record<string, any>
 
 
-    if (config.has('peerId')) {
-        const cnfId = config.get<{ id: string, privKey: string, pubKey: string }>('peerId')
-        const peerId = await PeerId.createFromJSON(cnfId)
+
+    if (config.has('loadPrivKeyFromFile') && config.get('loadPrivKeyFromFile')) {
+        //Import the test key file created with OpenSSL
+        //Test using a secp256k1 private key imported from OpenSSL
+        const privateKey: Buffer = fs.readFileSync(new URL(config.get('privateKeyURLPath')));
+
+        //Raw key in hex
+        const rawPrivKey = keyEncoder.encodePrivate(privateKey.toString(), 'pem', 'raw');
+        //Convert it as buffer
+        const rawPrivBuf = Buffer.from(rawPrivKey, 'hex');
+        let privKeyArray = new Uint8Array(rawPrivBuf);
+
+        //Calculate public key from the private key 
+        let pubKey: Uint8Array = secp256k1.publicKeyCreate(privKeyArray)
+
+        //Instantiate the libp2p-formatted private key
+        const libp2pPrivKey = new cryptoS.keys.supportedKeys.secp256k1.Secp256k1PrivateKey(privKeyArray, pubKey);
+
+
+        const peerId = await PeerId.createFromPrivKey(libp2pPrivKey.bytes);
 
         if (!isValidPeerId(peerId)) {
             throw new Error('Supplied PeerId is not valid!')
         }
-
         libp2p = await createLibP2P({ ...libp2pConfig, peerId })
-    } else {
-        const generatePeer = config.get('generatePeerWithSecp256k1Keys') as boolean;
-        if (generatePeer) {
-            const peerId = await PeerId.create({ bits: 256, keyType: 'secp256k1' });
-            console.log(config.get('displayPeerId') ? peerId.toJSON() : '');
+
+    }
+    else {
+        if (config.has('peerId') && "" != config.get('peerId')) {
+            const cnfId = config.get<{ id: string, privKey: string, pubKey: string }>('peerId')
+            const peerId = await PeerId.createFromJSON(cnfId)
+
+            if (!isValidPeerId(peerId)) {
+                throw new Error('Supplied PeerId is not valid!')
+            }
+
             libp2p = await createLibP2P({ ...libp2pConfig, peerId })
-        }
-        else {
-            libp2p = await createLibP2P(libp2pConfig)
+        } else {
+            const generatePeer = config.get('generatePeerWithSecp256k1Keys') as boolean;
+            if (generatePeer) {
+                const peerId = await PeerId.create({ bits: 256, keyType: 'secp256k1' });
+                if (!isValidPeerId(peerId)) {
+                    throw new Error('Supplied PeerId is not valid!')
+                }
+                console.log(config.get('displayPeerId') ? peerId.toJSON() : '');
+                libp2p = await createLibP2P({ ...libp2pConfig, peerId })
+            }
+            else {
+                libp2p = await createLibP2P(libp2pConfig)
+            }
+
         }
     }
+
 
     console.log('Node started, listening on addresses:')
     libp2p.multiaddrs.forEach((addr: any) => {
@@ -226,6 +284,8 @@ const main = async () => {
     })
     console.log('\n')
 }
+
+
 
 /**
  * Get a new server with the handler functions in this file bound to the methods
@@ -243,6 +303,7 @@ function getServer() {
         pingChannel: pingChannel,
         endCommunication: endCommunication,
         subscribe: subscribe,
+        unsubscribe: unsubscribe,
         publish: publish
     });
 

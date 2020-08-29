@@ -11,10 +11,9 @@ service CommunicationsApi {
     rpc PingChannel (NoParams) returns (Response);
     rpc ConnectToCommunicationsNode(NoParams) returns (stream Notification);
     rpc EndCommunication(NoParams) returns (Response);
-    //rpc CreateChannel (Channel) returns (Response);
     rpc Publish (PublishPayload) returns (Response);
     rpc Subscribe (Channel) returns (Response);
-    //rpc Unsubscribe (Channel) returns (Response);
+    rpc Unsubscribe (Channel) returns (Response);
 }
 
 message Channel {

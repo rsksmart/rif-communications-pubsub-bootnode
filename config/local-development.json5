@@ -1,0 +1,18 @@
+{
+  libp2p: {
+    addresses: {
+      listen: [
+        "/ip4/127.0.0.1/tcp/6030",
+        "/ip4/127.0.0.1/tcp/6031/ws"
+      ]
+    }
+  },
+    peerId: "",
+  rooms: ["0xtestroom", "0xtestroom2"],
+  // Port the GRPC server is listening to
+  grpcPort: 50051,
+  generatePeerWithSecp256k1Keys: true,
+  displayPeerId: true,
+  loadPrivKeyFromFile: true,
+  privateKeyURLPath:"file:///Users/raullaprida/RIF-Comms/rif-communications-pubsub-node/src/test/node1.pem"
+}
