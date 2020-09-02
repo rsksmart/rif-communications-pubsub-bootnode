@@ -1,27 +1,27 @@
 syntax = "proto3";
 package communicationsapi;
 
-/*    subscribe(topic: string, onMessage: (message: Buffer) => void): void
-      unsubscribe(topic: string, onMessage: (message: Buffer) => void): void
-      publish(topic: string, message: Buffer): Promise<void>
-      getSubscribers(topic: string): Promise<[]>*/
+
 service CommunicationsApi {
     //Server side stream, there's no need for a bidirectional stream, it's only needed so
     //The client can be notified of events in their subscriptions
-    rpc PingChannel (NoParams) returns (Response);
-    rpc ConnectToCommunicationsNode(NoParams) returns (stream Notification);
-    rpc EndCommunication(NoParams) returns (Response);
-    rpc Publish (PublishPayload) returns (Response);
-    rpc Subscribe (Channel) returns (Response);
-    rpc Unsubscribe (Channel) returns (Response);
+    rpc PingChannel (Void) returns (PongResponse);
+    rpc ConnectToCommunicationsNode(Void) returns (stream Notification);
+    rpc EndCommunication(Void) returns (Void);
+    rpc Publish (PublishPayload) returns (Void);
+    rpc Subscribe (Channel) returns (Void);
+    rpc Unsubscribe (Channel) returns (Void);
+    rpc GetSubscribers(Channel) returns (Subscribers);
+    rpc HasSubscriber(Subscriber) returns (BooleanResponse);
 }
+
 
 message Channel {
     string channelId = 1;
 }
 
 /*RPC needs a message, so when there are no params to send, this empty message is used*/
-message NoParams {}
+message Void {}
 
 message Notification {
     enum NotificationType {
@@ -36,9 +36,22 @@ message Notification {
     string message = 2;
 }
 
-message Response {
+message Subscribers {
+    repeated string peerId = 2;
+}
+
+message Subscriber {
+    string peerId = 1;
+    Channel channel = 2;
+}
+
+message PongResponse {
     bool success = 1;
     string message = 2;
+}
+
+message BooleanResponse {
+    bool payload = 1;
 }
 
 message PublishPayload {

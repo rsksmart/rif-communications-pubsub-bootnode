@@ -43,9 +43,22 @@ function subscribeToChannel(topic: string, client: any): void {
         console.log("Now sending message");
         let buf = Buffer.from('Hello World', 'utf8');
 
-        client.publish({ topic: topic, message:buf}, (error: any, response: any) => {
+        client.publish({ topic: topic, message: buf }, (error: any) => {
             console.log("PUBLISH STATUS:");
-            console.log(response);
+            if (error) {
+                console.log(error);
+            }
+            else {
+                console.log('ASKING FOR SUBSCRIBER');
+                client.hasSubscriber({ peerId: 'kaka', channel: { channelId: topic } },
+                    (error: any, response: any) => {
+                        if (error) {
+                            console.log(error);
+                        } else {
+                            console.log(response);
+                        }
+                    })
+            }
         });
     });
 }

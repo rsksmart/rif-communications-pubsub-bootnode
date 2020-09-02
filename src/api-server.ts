@@ -14,27 +14,6 @@ import cryptoS from 'libp2p-crypto'
 const secp256k1 = require('secp256k1')
 
 
-function isValidPeerId(peerId: PeerId): boolean {
-    return (
-        peerId.isValid() &&
-        (Buffer.isBuffer(peerId.id) || peerId.id instanceof Uint8Array) &&
-        Boolean(peerId.toB58String()) &&
-        Boolean(peerId.privKey) &&
-        Boolean(peerId.pubKey)
-    )
-}
-
-function formatMessage(msg: Message): string {
-    const prefix = '    '
-    const topics = `${prefix} Topics:
-  ${prefix}   - ${msg.topicIDs.join(`\n${prefix} - `)}`
-    const data = inspect(msg.data, undefined, 3, true).split('\n').map(line => `${prefix} ${line}`).join('\n')
-    return `${prefix}${chalk.blue(`From: ${msg.from}`)}
-  ${chalk.gray(topics)}
-  ${data}
-  `
-}
-
 var PROTO_PATH = __dirname + '/protos/api.proto';
 var grpc = require('grpc');
 var protoLoader = require('@grpc/proto-loader');
@@ -69,8 +48,6 @@ var commsApi = protoDescriptor.communicationsapi;
 */
 function connectToCommunicationsNode(call: any) {
 
-    console.log("connectToCommunicationsNode called");
-
     let notification = {
         type: 4,
         message: ''
@@ -79,7 +56,6 @@ function connectToCommunicationsNode(call: any) {
     if (!streamConnection) {
         streamConnection = call;
         notification.message = 'connection established';
-
     }
     else {
         notification.message = 'connection to server already exists';
@@ -93,36 +69,21 @@ function connectToCommunicationsNode(call: any) {
     rpc Subscribe (Channel) returns (Response);
 */
 function subscribe(parameters: any, callback: any): void {
-    console.log("SUBSCRIPTION");
-    const subscribed = subscribeToRoom(parameters.request.channelId, (message: string) => {
+    const status: any = subscribeToRoom(parameters.request.channelId, (message: string) => {
         console.log(`${parameters.request.channelId}: WE RECEIVED\n`, message);
     });
-    let msg = `subscribed to ${parameters.request.channelId}`;
 
-    if (!subscribed) {
-        msg == (subscriptions.has(parameters.request.channelId) ? 'already subscribed' : 'unknown error');
-    }
-
-    let response = {
-        success: subscribed,
-        message: msg
-    }
-    callback(null, response);
+    callback(status, {});
 }
 
 /*Implementation of protobuf service
     rpc Publish (PublishPayload) returns (Response);
 */
-function publish(parameters: any, callback: any): void {
+async function publish(parameters: any, callback: any): Promise<void> {
     //TODO if there's no active stream the server should warn the user
-    console.log(`PUBLISHING TO ROOM  ${parameters.request.topic} the message "${parameters.request.message}"`)
-    const published: boolean = publishToRoom(parameters.request.topic, parameters.request.message);
-    let response = {
-        success: published,
-        message: ''
-    }
-    callback(null, response);
+    const status: any = await publishToRoom(parameters.request.topic, parameters.request.message);
 
+    callback(status, {});
 }
 
 /*Implementation of protobuf service
@@ -130,31 +91,37 @@ function publish(parameters: any, callback: any): void {
 */
 function unsubscribe(parameters: any, callback: any): void {
 
+    let status: any = null;
+
     if (subscriptions.has(parameters.request.channelId)) {
         let room: Room = subscriptions.get(parameters.request.channelId);
         room.leave();
         subscriptions.delete(parameters.request.channelId);
-        callback(null, { success: true, message: `${parameters.request.channelId} left` });
     }
     else {
-        callback(null, { success: false, message: `Peer was not subscribed to ${parameters.request.channelId}` });
+        status = {
+            code: grpc.status.INVALID_ARGUMENT,
+            message: `Peer was not subscribed to ${parameters.request.channelId}`
+        }
     }
+
+    callback(status, {});
 
 }
 
-function pingChannel(noparam: any, callback: any) {
-    console.log("PING WAS CALLED");
+function pingChannel(parameters: any, callback: any) {
     counter++;
 
     var response = {
         success: true,
-        message: "OK"
+        message: "PONG"
     }
 
+    //Pong is sent as response and also through the stream, if one is open
     if (streamConnection) {
 
         if (counter > 10) {
-            console.log("ENDING CONNECTION");
+            console.log("ENDING STREAM DUE TO EXCESSIVE PINGS");
             streamConnection.end();
         }
         else {
@@ -170,43 +137,129 @@ function pingChannel(noparam: any, callback: any) {
     callback(null, response);
 }
 
-function endCommunication() {
-    if (streamConnection)
+function endCommunication(parameters: any, callback: any): void {
+
+    let status: any = null
+
+    if (streamConnection) {
         streamConnection.end();
+    }
+    else {
+        status = {
+            code: grpc.status.UNKNOWN,
+            message: 'There is no active connection to end'
+        }
+    }
+    callback(status, {});
+}
+
+function getSubscribers(parameters: any, callback: any): void {
+
+    let status: any = null;
+    let response: any = {};
+
+    if (subscriptions.has(parameters.request.channelId)) {
+        let room: Room = subscriptions.get(parameters.request.channelId);
+        const peers: string[] = room.peers;
+        response = { peerId: peers };
+    }
+    else {
+        status = {
+            code: grpc.status.INVALID_ARGUMENT,
+            message: `Peer is not subscribed to ${parameters.request.channelId}`
+        }
+    }
+
+    callback(status, response);
+
+}
+
+function hasSubscriber(parameters: any, callback: any): void {
+
+    let status: any = null;
+    let response: any = {};
+
+    if (subscriptions.has(parameters.request.channel.channelId)) {
+        const room: Room = subscriptions.get(parameters.request.channel.channelId);
+        const hasPeer: boolean = room.hasPeer(parameters.request.peerId);
+
+        response = { payload: hasPeer };
+    }
+    else {
+        status = { code: grpc.status.INVALID_ARGUMENT, message: `You are not subscribed to ${parameters.request.channel.channelId}` };
+    }
+
+    callback(status, response);
 }
 
 
+//////////////// Internal Server Functions //////////////////////
 
+function isValidPeerId(peerId: PeerId): boolean {
+    return (
+        peerId.isValid() &&
+        (Buffer.isBuffer(peerId.id) || peerId.id instanceof Uint8Array) &&
+        Boolean(peerId.toB58String()) &&
+        Boolean(peerId.privKey) &&
+        Boolean(peerId.pubKey)
+    )
+}
 
-function subscribeToRoom(roomName: string, messageHandler?: any): boolean {
-    let subscribed = false;//Aleady subscribed counts as "no subscription made"
-    if (libp2p != null && !subscriptions.has(roomName)) {
+function formatMessage(msg: Message): string {
+    const prefix = '    '
+    const topics = `${prefix} Topics:
+  ${prefix}   - ${msg.topicIDs.join(`\n${prefix} - `)}`
+    const data = inspect(msg.data, undefined, 3, true).split('\n').map(line => `${prefix} ${line}`).join('\n')
+    return `${prefix}${chalk.blue(`From: ${msg.from}`)}
+  ${chalk.gray(topics)}
+  ${data}
+  `
+}
+
+function subscribeToRoom(roomName: string, messageHandler?: any): any {
+
+    let status = null;
+
+    if (libp2p == null) {
+        status = { code: grpc.status.UNKNOWN, message: "Libp2p instance not configured" }
+    }
+    else if (subscriptions.has(roomName)) {
+        status = { code: grpc.status.INVALID_ARGUMENT, message: `Already subscribed to ${roomName}` }
+    }
+    else {
         const room = new Room(libp2p, roomName)
         console.log(` - ${roomName}`)
 
         room.on('peer:joined', (peer) => console.log(`${roomName}: ${chalk.green(`peer ${peer} joined`)}`));
         room.on('peer:left', (peer) => console.log(`${roomName}: ${chalk.red(`peer ${peer} left`)}`));
-        room.on('message', (message) => console.log(`${roomName}: message\n`, formatMessage(message)));
 
         if (messageHandler) {
             room.on('message', (message) => messageHandler(message));
+        } else {
+            room.on('message', (message) => console.log(`${roomName}: message\n`, formatMessage(message)));
         }
 
         subscriptions.set(roomName, room);
-        subscribed = true;
     }
-    return subscribed;
+    return status;
 }
 
-function publishToRoom(roomName: string, message: string): boolean {
-    let published = false;
-    if (libp2p != null && subscriptions.has(roomName)) {
-        const room: Room = subscriptions.get(roomName);
+async function publishToRoom(roomName: string, message: string): Promise<any> {
 
-        room.broadcast(message);
-        published = true;
+    let status: any = null;
+
+    if (libp2p == null) {
+        status = { code: grpc.status.UNKNOWN, message: "Libp2p instance not configured" }
     }
-    return published;
+    else if (!subscriptions.has(roomName)) {
+        status = { code: grpc.status.INVALID_ARGUMENT, message: `Not subscribed to ${roomName}` }
+    }
+    else {
+        const room: Room = subscriptions.get(roomName);
+        await room.broadcast(message);
+    }
+
+    return status;
 }
 
 
@@ -304,7 +357,9 @@ function getServer() {
         endCommunication: endCommunication,
         subscribe: subscribe,
         unsubscribe: unsubscribe,
-        publish: publish
+        publish: publish,
+        getSubscribers: getSubscribers,
+        hasSubscriber: hasSubscriber
     });
 
     return server;
