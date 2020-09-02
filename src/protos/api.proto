@@ -5,14 +5,33 @@ package communicationsapi;
 service CommunicationsApi {
     //Server side stream, there's no need for a bidirectional stream, it's only needed so
     //The client can be notified of events in their subscriptions
+
+    //Test the connection to the server, both the stream a the server response
     rpc PingChannel (Void) returns (PongResponse);
+
+    //Open a data stream with the server, it can only receive messages
     rpc ConnectToCommunicationsNode(Void) returns (stream Notification);
+
+    //Close the data stream
     rpc EndCommunication(Void) returns (Void);
+
+    //Publish a message in a channel
     rpc Publish (PublishPayload) returns (Void);
+
+    //Subscribe to a channel
     rpc Subscribe (Channel) returns (Void);
+
+    //Unsubscribe to a channel
     rpc Unsubscribe (Channel) returns (Void);
+
+    //Get the subscribers of a participating channel
     rpc GetSubscribers(Channel) returns (Subscribers);
+
+    //Query if a subscriber exists in a participating channel
     rpc HasSubscriber(Subscriber) returns (BooleanResponse);
+    
+    //Send a message to a peer
+    rpc SendMessage(Msg) returns (Void);
 }
 
 
@@ -59,11 +78,8 @@ message PublishPayload {
     bytes message = 2;
 }
 
-message Payload {
-    string from = 1;
-    optional string to = 2;
-    bytes data  = 3;
-    bytes seqno = 4;
-    repeated string topicIDs = 5;
+message Msg {
+    optional string to = 1;
+    bytes data  = 2;
 }
 
