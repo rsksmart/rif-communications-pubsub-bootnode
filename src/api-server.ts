@@ -324,9 +324,20 @@ const main = async () => {
 
 
     console.log('Node started, listening on addresses:')
+
     libp2p.multiaddrs.forEach((addr: any) => {
         console.log(`${addr.toString()}/p2p/${libp2p.peerId.toB58String()}`)
     })
+
+    
+    libp2p.on("peer:discovery", (peerId) => {
+        console.log(`Found peer ${peerId.toB58String()}`);
+      });
+    
+      // Listen for new connections to peers
+      libp2p.connectionManager.on("peer:connect", (connection:any) => {
+       console.log(`Connected to ${connection.remotePeer.toB58String()}`);
+      });
 
     console.log('\nListening on topics: ')
     const rooms = config.get('rooms') as Array<string>

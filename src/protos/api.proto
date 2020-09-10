@@ -79,7 +79,8 @@ message PublishPayload {
 }
 
 message Msg {
-    optional string to = 1;
+    optional string to = 1;// 20 bytes address rsk
     bytes data  = 2;
+    
 }
 
