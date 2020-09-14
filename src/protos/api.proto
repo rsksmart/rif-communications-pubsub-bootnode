@@ -30,11 +30,25 @@ service CommunicationsApi {
     //Query if a subscriber exists in a participating channel
     rpc HasSubscriber(Subscriber) returns (BooleanResponse);
     
-    //Send a message to a peer
-    rpc SendMessage(Msg) returns (Void);
+    //Send a direct message to a peer
+    rpc SendMessage(DirectMsgPayload) returns (Void);
 }
 
+/*Types of notifications that can be sent by the server, the type of notification
+can be used to know how to parse the received message in case the format of the payload 
+is not a self-describing message (JSON would be self-describing)*/
+enum NotificationType {
+    //You've received a new direct message from a peer
+    NEW_DIRECT_MESSAGE = 0;
 
+    //You've received new data from a subscribed channel
+    NEW_DATA_FROM_SUBSCRIPTION = 1;
+
+    //Used by the server to notify about internal events
+    SERVER_NOTIFICATION = 2;
+}
+
+//The topic
 message Channel {
     string channelId = 1;
 }
@@ -42,45 +56,59 @@ message Channel {
 /*RPC needs a message, so when there are no params to send, this empty message is used*/
 message Void {}
 
+/*The unidirectional stream from the server only sends these kind of messages*/
 message Notification {
-    enum NotificationType {
-        INVITATION_TO_ROOM = 0;
-        INVITATION_TO_ROOM_RESPONSE = 1;
-        AUTHENTICATION_REQUEST = 2;
-        AUTHENTICATION_RESPONSE = 3;
-        NEW_MESSAGE = 4;
-        NEW_MESSAGE_RESPONSE = 5;
-    }
     NotificationType type = 1;
-    string message = 2;
+    Msg message = 2;
 }
 
+//The message payload has no restrictions, the applications can model it as fits best.
+message Msg {
+    bytes payload = 1;
+}
+
+// Set of peerIDs subscribed to a specific channel
 message Subscribers {
-    repeated string peerId = 2;
+    repeated string peerId = 1;
 }
 
+//Information mapping a user to a channel subscription
 message Subscriber {
     string peerId = 1;
     Channel channel = 2;
 }
 
+//A simple message format to define a boolean response
+message BooleanResponse {
+    bool value = 1;
+}
+
+
+//Message used to publish a message in a specific topic
+message PublishPayload {
+    Channel topic = 1;
+    Msg message = 2;
+}
+
+/*Message used to send a message to a specific peer.
+from: PeerId of the author of the message contents
+If from is not defined, then the node's peerId will be used
+
+to: PeerId of the intended recipient of the message
+
+message: The actual contents of the message
+*/
+message DirectMsgPayload {
+    optional string from = 1;
+    string to = 2;
+    Msg message = 3;
+}
+
+
+
+//Only used for the PingChannel test. It has no other valuable use.
 message PongResponse {
     bool success = 1;
     string message = 2;
-}
-
-message BooleanResponse {
-    bool payload = 1;
-}
-
-message PublishPayload {
-    string topic = 1;
-    bytes message = 2;
-}
-
-message Msg {
-    optional string to = 1;// 20 bytes address rsk
-    bytes data  = 2;
-    
 }
 

@@ -42,7 +42,7 @@ declare module 'libp2p' {
       publish(topic: string, message: Buffer): Promise<void>
       getSubscribers(topic: string): Promise<[]>
     }
-    connectionManager
+    connectionManager:any
 
     connections: Record<string, Array<{ remoteAddr: { toString: () => {} } }>>
   }

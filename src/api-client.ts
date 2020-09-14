@@ -23,9 +23,13 @@ function main() {
         user = 'Raulo';
     }
     runConnectToNode((error: any, response: any) => {
-        console.log("CONNECTION ENDED");
-        console.log(error);
-        console.log(response);
+        if(error){
+            //console.log(error);
+        }
+        else{
+            //console.log(response);
+            //console.log("Connection ended");
+        }
     }, client);
 
     subscribeToChannel("MiCanal1", client);
@@ -38,28 +42,33 @@ function main() {
 }
 
 function subscribeToChannel(topic: string, client: any): void {
-    client.subscribe({ channelId: topic }, (error: any, response: any) => {
-        console.log(`Subscription status: ${response.message}`);
-        console.log("Now sending message");
-        let buf = Buffer.from('Hello World', 'utf8');
+    client.subscribe({ channelId: topic }, (subscriptiomError: any, response: any) => {
+        if (subscriptiomError) {
+            console.log(`Subscription status error: ${subscriptiomError}`);
+        }
+        else {
+            console.log("Now sending message");
+            let msg = Buffer.from('Hello World', 'utf8')
+            client.publish({ topic: { channelId: topic }, message: { payload: msg } }, (error: any, response: any) => {
+                console.log(response);
+                if (error) {
+                    console.log("Error in Publish :");
+                    console.log(error);
+                }
+                else {
+                    console.log('ASKING FOR SUBSCRIBER');
+                    client.hasSubscriber({ peerId: 'kaka', channel: { channelId: topic } },
+                        (error: any, response: any) => {
+                            if (error) {
+                                console.log(error);
+                            } else {
+                                console.log(response);
+                            }
+                        })
+                }
+            });
+        }
 
-        client.publish({ topic: topic, message: buf }, (error: any) => {
-            console.log("PUBLISH STATUS:");
-            if (error) {
-                console.log(error);
-            }
-            else {
-                console.log('ASKING FOR SUBSCRIBER');
-                client.hasSubscriber({ peerId: 'kaka', channel: { channelId: topic } },
-                    (error: any, response: any) => {
-                        if (error) {
-                            console.log(error);
-                        } else {
-                            console.log(response);
-                        }
-                    })
-            }
-        });
     });
 }
 
@@ -72,11 +81,7 @@ function runConnectToNode(callback: any, client: any): void {
     var call = client.connectToCommunicationsNode({});
 
     call.on('data', (notification: any) => {
-        console.log(notification);
-        /*client.pingChannel({}, (error:any, response: any) => {
-            console.log((error)?error:"OK");
-            console.log(response)
-        });*/
+        //console.log(notification);
 
     });
 

@@ -49,16 +49,16 @@ var commsApi = protoDescriptor.communicationsapi;
 function connectToCommunicationsNode(call: any) {
 
     let notification = {
-        type: 4,
-        message: ''
+        type: 2,
+        message: {}
     }
 
     if (!streamConnection) {
         streamConnection = call;
-        notification.message = 'connection established';
+        notification.message = {payload: Buffer.from('connection established', 'utf8')};
     }
     else {
-        notification.message = 'connection to server already exists';
+        notification.message = {payload: Buffer.from('connection to server already exists', 'utf8')};
     }
 
     call.write(notification);
@@ -68,8 +68,9 @@ function connectToCommunicationsNode(call: any) {
 /*Implementation of protobuf service
     rpc Subscribe (Channel) returns (Response);
 */
+//TODO the function must write to the stream not to a console log
 function subscribe(parameters: any, callback: any): void {
-    const status: any = subscribeToRoom(parameters.request.channelId, (message: string) => {
+    let status: any = subscribeToRoom(parameters.request.channelId, (message: string) => {
         console.log(`${parameters.request.channelId}: WE RECEIVED\n`, message);
     });
 
@@ -81,7 +82,9 @@ function subscribe(parameters: any, callback: any): void {
 */
 async function publish(parameters: any, callback: any): Promise<void> {
     //TODO if there's no active stream the server should warn the user
-    const status: any = await publishToRoom(parameters.request.topic, parameters.request.message);
+
+    console.log(`publishing ${parameters.request.message.payload} in topic ${parameters.request.topic.channelId} `)
+    const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload);
 
     callback(status, {});
 }
@@ -127,7 +130,7 @@ function pingChannel(parameters: any, callback: any) {
         else {
             let notification = {
                 type: 4,
-                message: "Pong " + counter
+                message: "{payload: Pong " + counter+"}"
             }
 
             streamConnection.write(notification);
@@ -222,13 +225,15 @@ function subscribeToRoom(roomName: string, messageHandler?: any): any {
 
     if (libp2p == null) {
         status = { code: grpc.status.UNKNOWN, message: "Libp2p instance not configured" }
+        console.log('Libp2p instance not configured')
     }
     else if (subscriptions.has(roomName)) {
+        console.log('already subscribed')
         status = { code: grpc.status.INVALID_ARGUMENT, message: `Already subscribed to ${roomName}` }
     }
     else {
         const room = new Room(libp2p, roomName)
-        console.log(` - ${roomName}`)
+        console.log(` - New subscription to ${roomName}`)
 
         room.on('peer:joined', (peer) => console.log(`${roomName}: ${chalk.green(`peer ${peer} joined`)}`));
         room.on('peer:left', (peer) => console.log(`${roomName}: ${chalk.red(`peer ${peer} left`)}`));
