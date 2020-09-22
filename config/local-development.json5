@@ -13,6 +13,11 @@
   grpcPort: 50051,
   generatePeerWithSecp256k1Keys: true,
   displayPeerId: true,
-  loadPrivKeyFromFile: true,
-  privateKeyURLPath:"file:///Users/raullaprida/RIF-Comms/rif-communications-pubsub-node/src/test/node1.pem"
+  key : {
+    createNew: false,
+    password:"password",
+    openSSL:true,
+    privateKeyURLPath:"file:///Users/raullaprida/RIF-Comms/rif-communications-pubsub-node/test/keys/openSSL/v2/ec_key_pkcs8_v2.der",
+    type: "DER"
+  }
 }

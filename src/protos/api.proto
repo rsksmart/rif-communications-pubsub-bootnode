@@ -6,9 +6,6 @@ service CommunicationsApi {
     //Server side stream, there's no need for a bidirectional stream, it's only needed so
     //The client can be notified of events in their subscriptions
 
-    //Test the connection to the server, both the stream a the server response
-    rpc PingChannel (Void) returns (PongResponse);
-
     //Open a data stream with the server, it can only receive messages
     rpc ConnectToCommunicationsNode(Void) returns (stream Notification);
 
@@ -102,13 +99,5 @@ message DirectMsgPayload {
     optional string from = 1;
     string to = 2;
     Msg message = 3;
-}
-
-
-
-//Only used for the PingChannel test. It has no other valuable use.
-message PongResponse {
-    bool success = 1;
-    string message = 2;
 }
 

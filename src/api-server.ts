@@ -1,7 +1,7 @@
 /* eslint no-console: 0 */
 
 import config from 'config'
-import { Room, createLibP2P, Message } from '@rsksmart/rif-communications-pubsub'
+import { Room, createLibP2P, Message, DirectChat, DirectMessage } from '@rsksmart/rif-communications-pubsub'
 import PeerId from 'peer-id'
 import chalk from 'chalk'
 import { inspect } from 'util'
@@ -11,6 +11,7 @@ import fs from 'fs'
 import KeyEncoder from 'key-encoder'
 const keyEncoder: KeyEncoder = new KeyEncoder('secp256k1')
 import cryptoS from 'libp2p-crypto'
+import { decryptPrivateKey, decryptDERPrivateKey } from './crypto'
 const secp256k1 = require('secp256k1')
 
 
@@ -18,12 +19,12 @@ var PROTO_PATH = __dirname + '/protos/api.proto';
 var grpc = require('grpc');
 var protoLoader = require('@grpc/proto-loader');
 var parseArgs = require('minimist');
-var counter: any = 0;
 let libp2p: Libp2p;
 
 //State of the connection with the user of the GRPC API
 let subscriptions = new Map();
 var streamConnection: any;
+let directChat: DirectChat;
 
 
 
@@ -55,10 +56,10 @@ function connectToCommunicationsNode(call: any) {
 
     if (!streamConnection) {
         streamConnection = call;
-        notification.message = {payload: Buffer.from('connection established', 'utf8')};
+        notification.message = { payload: Buffer.from('connection established', 'utf8') };
     }
     else {
-        notification.message = {payload: Buffer.from('connection to server already exists', 'utf8')};
+        notification.message = { payload: Buffer.from('connection to server already exists', 'utf8') };
     }
 
     call.write(notification);
@@ -71,7 +72,16 @@ function connectToCommunicationsNode(call: any) {
 //TODO the function must write to the stream not to a console log
 function subscribe(parameters: any, callback: any): void {
     let status: any = subscribeToRoom(parameters.request.channelId, (message: string) => {
-        console.log(`${parameters.request.channelId}: WE RECEIVED\n`, message);
+
+        if (streamConnection) {
+            let notification = {
+                type: 0, //NEW_DIRECT_MESSAGE
+                message: { payload: message }
+            }
+
+            streamConnection.write(notification);
+        }
+
     });
 
     callback(status, {});
@@ -87,6 +97,14 @@ async function publish(parameters: any, callback: any): Promise<void> {
     const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload);
 
     callback(status, {});
+}
+
+async function sendMessage(parameters: any, callback: any): Promise<void> {
+
+    console.log(`sending ${parameters.request.message.payload} to ${parameters.request.to} `)
+
+    await directChat.sendTo(parameters.request.to, { level: 'info', msg: parameters.request.message.payload });
+    callback(null, {});
 }
 
 /*Implementation of protobuf service
@@ -112,33 +130,6 @@ function unsubscribe(parameters: any, callback: any): void {
 
 }
 
-function pingChannel(parameters: any, callback: any) {
-    counter++;
-
-    var response = {
-        success: true,
-        message: "PONG"
-    }
-
-    //Pong is sent as response and also through the stream, if one is open
-    if (streamConnection) {
-
-        if (counter > 10) {
-            console.log("ENDING STREAM DUE TO EXCESSIVE PINGS");
-            streamConnection.end();
-        }
-        else {
-            let notification = {
-                type: 4,
-                message: "{payload: Pong " + counter+"}"
-            }
-
-            streamConnection.write(notification);
-        }
-    }
-
-    callback(null, response);
-}
 
 function endCommunication(parameters: any, callback: any): void {
 
@@ -273,17 +264,39 @@ const main = async () => {
     const libp2pConfig = config.get('libp2p') as Record<string, any>
 
 
+    const keyConfig = config.get('key') as Record<string, any>
 
-    if (config.has('loadPrivKeyFromFile') && config.get('loadPrivKeyFromFile')) {
+    console.log(keyConfig);
+    if (!keyConfig.createNew) {
         //Import the test key file created with OpenSSL
         //Test using a secp256k1 private key imported from OpenSSL
-        const privateKey: Buffer = fs.readFileSync(new URL(config.get('privateKeyURLPath')));
+        const privateKey: Buffer = fs.readFileSync(new URL(keyConfig.get('privateKeyURLPath')));
+        let privKeyArray = null;
 
-        //Raw key in hex
-        const rawPrivKey = keyEncoder.encodePrivate(privateKey.toString(), 'pem', 'raw');
-        //Convert it as buffer
-        const rawPrivBuf = Buffer.from(rawPrivKey, 'hex');
-        let privKeyArray = new Uint8Array(rawPrivBuf);
+        if (keyConfig.type == "PEM") {
+            if (keyConfig.password == "") { //unencrypted
+                privKeyArray = new Uint8Array(Buffer.from(keyEncoder.encodePrivate(privateKey.toString(), 'pem', 'raw'), 'hex'));
+            }
+            else {
+                if (keyConfig.openSSL) {
+                    throw new Error('OpenSSL encrypted keys must be in DER');
+                }
+                else {
+                    privKeyArray = new Uint8Array(decryptPrivateKey(privateKey.toString(), keyConfig.password));
+                }
+            }
+        }
+        else {
+            //DER
+            if (keyConfig.password == "") { //not encrypted
+                privKeyArray = new Uint8Array(Buffer.from(keyEncoder.encodePrivate(privateKey.toString(), 'der', 'raw'), 'hex'));
+            }
+            else {
+                console.log("Loading encrypted DER key");
+                privKeyArray = new Uint8Array(decryptDERPrivateKey(privateKey, keyConfig.password));
+            }
+        }
+
 
         //Calculate public key from the private key 
         let pubKey: Uint8Array = secp256k1.publicKeyCreate(privKeyArray)
@@ -334,23 +347,48 @@ const main = async () => {
         console.log(`${addr.toString()}/p2p/${libp2p.peerId.toB58String()}`)
     })
 
-    
+
     libp2p.on("peer:discovery", (peerId) => {
         console.log(`Found peer ${peerId.toB58String()}`);
-      });
-    
-      // Listen for new connections to peers
-      libp2p.connectionManager.on("peer:connect", (connection:any) => {
-       console.log(`Connected to ${connection.remotePeer.toB58String()}`);
-      });
+    });
+
+    // Listen for new connections to peers
+    libp2p.connectionManager.on("peer:connect", (connection: any) => {
+        console.log(`Connected to ${connection.remotePeer.toB58String()}`);
+    });
 
     console.log('\nListening on topics: ')
     const rooms = config.get('rooms') as Array<string>
 
     rooms.forEach((roomName: string) => {
-        subscribeToRoom(roomName);
+        subscribeToRoom(roomName, (message: string) => {
+
+            if (streamConnection) {
+                let notification = {
+                    type: 0, //NEW_DIRECT_MESSAGE
+                    message: { payload: message }
+                }
+
+                streamConnection.write(notification);
+            }
+
+        });
+    })
+
+    directChat = DirectChat.getDirectChat(libp2p);
+    directChat.on('message', (message: DirectMessage) => {
+
+        if (streamConnection) {
+            let notification = {
+                type: 0, //NEW_DIRECT_MESSAGE
+                message: { payload: message }
+            }
+
+            streamConnection.write(notification);
+        }
 
     })
+    directChat.on('error', (error: Error) => { })
     console.log('\n')
 }
 
@@ -369,13 +407,13 @@ function getServer() {
     var server = new grpc.Server();
     server.addService(commsApi.CommunicationsApi.service, {
         connectToCommunicationsNode: connectToCommunicationsNode,
-        pingChannel: pingChannel,
         endCommunication: endCommunication,
         subscribe: subscribe,
         unsubscribe: unsubscribe,
         publish: publish,
         getSubscribers: getSubscribers,
-        hasSubscriber: hasSubscriber
+        hasSubscriber: hasSubscriber,
+        sendMessage: sendMessage
     });
 
     return server;

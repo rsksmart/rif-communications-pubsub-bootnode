@@ -31,6 +31,7 @@
     "exec": "tasegir run --watch ./src/index.ts",
     "api-server": "tasegir run --watch ./src/api-server.ts",
     "api-client": "tasegir run --watch ./src/api-client.ts ",
+    "create-key": "tasegir run --watch ./src/key-utils.ts ",
     "lint": "tasegir lint",
     "release": "tasegir release",
     "build": "tasegir build",
@@ -38,16 +39,22 @@
   },
   "dependencies": {
     "@grpc/proto-loader": "^0.5.5",
-    "@rsksmart/rif-communications-pubsub": "0.1.0-dev.8",
+    "@rsksmart/rif-communications-pubsub": "0.1.0-dev.9",
+    "@types/asn1js": "0.0.2",
     "@types/node-forge": "^0.9.5",
+    "@types/pkijs": "0.0.5",
+    "asn1js": "^2.0.26",
     "chalk": "^4.1.0",
     "config": "^3.3.1",
     "grpc": "^1.24.3",
+    "karma": "^5.2.2",
     "key-encoder": "^2.0.3",
     "libp2p": "^0.28.10",
     "libp2p-crypto-secp256k1": "^0.4.3",
-    "node-forge": "^0.9.1",
-    "peer-id": "^0.14.0"
+    "node-forge": "^0.9.2",
+    "node-webcrypto-ossl": "^2.1.2",
+    "peer-id": "^0.14.0",
+    "pkijs": "^2.1.90"
   },
   "devDependencies": {
     "@types/config": "0.0.36",
