@@ -266,7 +266,7 @@ const main = async () => {
 
     const keyConfig = config.get('key') as Record<string, any>
 
-    console.log(keyConfig);
+    //console.log(keyConfig);
     if (!keyConfig.createNew) {
         //Import the test key file created with OpenSSL
         //Test using a secp256k1 private key imported from OpenSSL
