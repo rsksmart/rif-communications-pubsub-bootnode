@@ -22,22 +22,9 @@ function main() {
     } else {
         user = 'Raulo';
     }
-    runConnectToNode((error: any, response: any) => {
-        if(error){
-            //console.log(error);
-        }
-        else{
-            //console.log(response);
-            //console.log("Connection ended");
-        }
-    }, client);
+    runConnectToNode(client);
 
     subscribeToChannel("MiCanal1", client);
-
-    /*pingServer((error:any, response: any) => {
-        console.log((error)?error:"OK");
-        console.log(response)
-    }, client);*/
 
 }
 
@@ -48,9 +35,10 @@ function subscribeToChannel(topic: string, client: any): void {
         }
         else {
             console.log("Now sending message");
-            let msg = Buffer.from('Hello World', 'utf8')
+            let msg = Buffer.from('Hello World', 'utf8');
+
+
             client.publish({ topic: { channelId: topic }, message: { payload: msg } }, (error: any, response: any) => {
-                console.log(response);
                 if (error) {
                     console.log("Error in Publish :");
                     console.log(error);
@@ -73,20 +61,38 @@ function subscribeToChannel(topic: string, client: any): void {
 }
 
 
-function pingServer(callback: any, client: any): void {
-    client.pingChannel({}, callback);
-}
-
-function runConnectToNode(callback: any, client: any): void {
+function runConnectToNode(client: any): void {
     var call = client.connectToCommunicationsNode({});
 
-    call.on('data', (notification: any) => {
-        //console.log(notification);
+    call.on('data', (response: any) => {
+
+        if (response.notification_type == 'channelNewData') {
+            console.log("/////////////////////////////");
+            console.log("New subscription data");
+            console.log(`Channel(s): ${JSON.stringify(response.channelNewData.channel)}`);
+            console.log(`Published by: ${response.channelNewData.from}`);
+            console.log(`Message: ${Buffer.from(JSON.parse(response.channelNewData.data).data).toString()}`);
+            console.log(`Nonce: ${response.channelNewData.nonce.toString('hex')}`);
+            console.log("/////////////////////////////");
+        }
+        else {
+            console.log("Unknown message type received though the grpc server stream");
+            console.log(response);
+        }
+
 
     });
 
 
-    call.on('end', callback);
+    call.on('end', (error: any, response: any) => {
+        if (error) {
+            console.log(error);
+        }
+        else {
+            console.log(response);
+            console.log("Connection ended");
+        }
+    });
 }
 
 main();

@@ -49,21 +49,25 @@ var commsApi = protoDescriptor.communicationsapi;
 */
 function connectToCommunicationsNode(call: any) {
 
-    let notification = {
-        type: 2,
-        message: {}
+    let notificationMsg = {
     }
 
     if (!streamConnection) {
         streamConnection = call;
-        notification.message = { payload: Buffer.from('connection established', 'utf8') };
+
+        notificationMsg = {
+            notification: Buffer.from('OK', 'utf8'),
+            payload: Buffer.from('connection established', 'utf8')
+        }
     }
     else {
-        notification.message = { payload: Buffer.from('connection to server already exists', 'utf8') };
+        notificationMsg = {
+            notification: Buffer.from('ERROR', 'utf8'),
+            payload: Buffer.from('connection to server already exists', 'utf8')
+        }
     }
 
-    call.write(notification);
-
+    call.write(notificationMsg);
 }
 
 /*Implementation of protobuf service
@@ -71,18 +75,7 @@ function connectToCommunicationsNode(call: any) {
 */
 //TODO the function must write to the stream not to a console log
 function subscribe(parameters: any, callback: any): void {
-    let status: any = subscribeToRoom(parameters.request.channelId, (message: string) => {
-
-        if (streamConnection) {
-            let notification = {
-                type: 0, //NEW_DIRECT_MESSAGE
-                message: { payload: message }
-            }
-
-            streamConnection.write(notification);
-        }
-
-    });
+    let status: any = subscribeToRoom(parameters.request.channelId);
 
     callback(status, {});
 }
@@ -177,7 +170,7 @@ function hasSubscriber(parameters: any, callback: any): void {
         const room: Room = subscriptions.get(parameters.request.channel.channelId);
         const hasPeer: boolean = room.hasPeer(parameters.request.peerId);
 
-        response = { payload: hasPeer };
+        response = { value: hasPeer };
     }
     else {
         status = { code: grpc.status.INVALID_ARGUMENT, message: `You are not subscribed to ${parameters.request.channel.channelId}` };
@@ -210,7 +203,13 @@ function formatMessage(msg: Message): string {
   `
 }
 
-function subscribeToRoom(roomName: string, messageHandler?: any): any {
+function sendStreamNotification(message: any) {
+    if (streamConnection) {
+        streamConnection.write(message);
+    }
+}
+
+function subscribeToRoom(roomName: string): any {
 
     let status = null;
 
@@ -226,14 +225,63 @@ function subscribeToRoom(roomName: string, messageHandler?: any): any {
         const room = new Room(libp2p, roomName)
         console.log(` - New subscription to ${roomName}`)
 
-        room.on('peer:joined', (peer) => console.log(`${roomName}: ${chalk.green(`peer ${peer} joined`)}`));
-        room.on('peer:left', (peer) => console.log(`${roomName}: ${chalk.red(`peer ${peer} left`)}`));
+        room.on('peer:joined', (peer) => {
+            console.log(`${roomName}: ${chalk.green(`peer ${peer} joined`)}`);
+            sendStreamNotification({
+                channelPeerJoined: {
+                    channel: {
+                        channelId: roomName
+                    },
+                    peerId: peer
+                }
+            });
 
-        if (messageHandler) {
-            room.on('message', (message) => messageHandler(message));
-        } else {
-            room.on('message', (message) => console.log(`${roomName}: message\n`, formatMessage(message)));
-        }
+        });
+
+        room.on('peer:left', (peer) => {
+            console.log(`${roomName}: ${chalk.red(`peer ${peer} left`)}`);
+            sendStreamNotification({
+                channelPeerLeft: {
+                    channel: {
+                        channelId: roomName
+                    },
+                    peerId: peer
+                }
+            });
+
+        });
+
+
+        room.on('message', (message) => {
+            console.log(`${roomName}: message\n`, formatMessage(message));
+
+
+            let channels = [];
+            for (let index = 0; index < message.topicIDs.length; index++) {
+                const topicId: string = message.topicIDs[index];
+                channels.push({ channelId: topicId });
+            }
+
+            if (message.signature != null) {
+                if (message.key != null) {
+                    //Public key for verification
+                    //TODO Verify a published message before sending it might be a good practice
+                    //This signature is communication-implementation dependent, it's not an application-based
+                    //authentication (i.e, it's using the node's peerID to sign the protobuf message sent by the protocol)
+
+                }
+            }
+
+            sendStreamNotification({
+                channelNewData: {
+                    from: message.from,
+                    data: Buffer.from(JSON.stringify(message.data)),
+                    nonce: message.seqno,
+                    channel: channels
+                }
+            });
+        });
+
 
         subscriptions.set(roomName, room);
     }
@@ -259,6 +307,47 @@ async function publishToRoom(roomName: string, message: string): Promise<any> {
 }
 
 
+function loadEncryptedPeerId(keyFile: URL, keyType: string, password: string, isOpenSSL: boolean): Promise<PeerId> {
+    //Import the test key file created with OpenSSL
+    //Test using a secp256k1 private key imported from OpenSSL
+    const privateKey: Buffer = fs.readFileSync(keyFile);
+    let privKeyArray = null;
+
+    if (keyType == "PEM") {
+        if (password == "") { //unencrypted
+            privKeyArray = new Uint8Array(Buffer.from(keyEncoder.encodePrivate(privateKey.toString(), 'pem', 'raw'), 'hex'));
+        }
+        else {
+            if (isOpenSSL) {
+                throw new Error('OpenSSL encrypted keys must be in DER');
+            }
+            else {
+                privKeyArray = new Uint8Array(decryptPrivateKey(privateKey.toString(), password));
+            }
+        }
+    }
+    else {
+        //DER
+        if (password == "") { //not encrypted
+            privKeyArray = new Uint8Array(Buffer.from(keyEncoder.encodePrivate(privateKey.toString(), 'der', 'raw'), 'hex'));
+        }
+        else {
+            console.log("Loading encrypted DER key");
+            privKeyArray = new Uint8Array(decryptDERPrivateKey(privateKey, password));
+        }
+    }
+
+
+    //Calculate public key from the private key 
+    let pubKey: Uint8Array = secp256k1.publicKeyCreate(privKeyArray)
+
+    //Instantiate the libp2p-formatted private key
+    const libp2pPrivKey = new cryptoS.keys.supportedKeys.secp256k1.Secp256k1PrivateKey(privKeyArray, pubKey);
+
+
+    return PeerId.createFromPrivKey(libp2pPrivKey.bytes);
+}
+
 const main = async () => {
 
     const libp2pConfig = config.get('libp2p') as Record<string, any>
@@ -266,79 +355,51 @@ const main = async () => {
 
     const keyConfig = config.get('key') as Record<string, any>
 
-    //console.log(keyConfig);
-    if (!keyConfig.createNew) {
-        //Import the test key file created with OpenSSL
-        //Test using a secp256k1 private key imported from OpenSSL
-        const privateKey: Buffer = fs.readFileSync(new URL(keyConfig.get('privateKeyURLPath')));
-        let privKeyArray = null;
+    //Load a peerId from an encrypted private key
+    if (config.has('key') && "" != config.get('key')) {
 
-        if (keyConfig.type == "PEM") {
-            if (keyConfig.password == "") { //unencrypted
-                privKeyArray = new Uint8Array(Buffer.from(keyEncoder.encodePrivate(privateKey.toString(), 'pem', 'raw'), 'hex'));
-            }
-            else {
-                if (keyConfig.openSSL) {
-                    throw new Error('OpenSSL encrypted keys must be in DER');
-                }
-                else {
-                    privKeyArray = new Uint8Array(decryptPrivateKey(privateKey.toString(), keyConfig.password));
-                }
-            }
-        }
-        else {
-            //DER
-            if (keyConfig.password == "") { //not encrypted
-                privKeyArray = new Uint8Array(Buffer.from(keyEncoder.encodePrivate(privateKey.toString(), 'der', 'raw'), 'hex'));
-            }
-            else {
-                console.log("Loading encrypted DER key");
-                privKeyArray = new Uint8Array(decryptDERPrivateKey(privateKey, keyConfig.password));
-            }
-        }
-
-
-        //Calculate public key from the private key 
-        let pubKey: Uint8Array = secp256k1.publicKeyCreate(privKeyArray)
-
-        //Instantiate the libp2p-formatted private key
-        const libp2pPrivKey = new cryptoS.keys.supportedKeys.secp256k1.Secp256k1PrivateKey(privKeyArray, pubKey);
-
-
-        const peerId = await PeerId.createFromPrivKey(libp2pPrivKey.bytes);
+        const peerId: PeerId = await loadEncryptedPeerId(new URL(keyConfig.get('privateKeyURLPath')),
+            keyConfig.type, keyConfig.password, keyConfig.openSSL);
 
         if (!isValidPeerId(peerId)) {
             throw new Error('Supplied PeerId is not valid!')
         }
+
         libp2p = await createLibP2P({ ...libp2pConfig, peerId })
 
     }
-    else {
-        if (config.has('peerId') && "" != config.get('peerId')) {
-            const cnfId = config.get<{ id: string, privKey: string, pubKey: string }>('peerId')
-            const peerId = await PeerId.createFromJSON(cnfId)
+    //Load a peerId from cleartext peerId infomartion
+    else if (config.has('peerId') && "" != config.get('peerId')) {
+        const cnfId = config.get<{ id: string, privKey: string, pubKey: string }>('peerId')
+        const peerId = await PeerId.createFromJSON(cnfId)
 
+        if (!isValidPeerId(peerId)) {
+            throw new Error('Supplied PeerId is not valid!')
+        }
+
+        libp2p = await createLibP2P({ ...libp2pConfig, peerId })
+    }
+    // Create a new Peer
+    else {
+
+        const generatePeer = config.get('generatePeerWithSecp256k1Keys') as boolean;
+
+        //Generate using secp256k1 
+        if (generatePeer) {
+            const peerId = await PeerId.create({ bits: 256, keyType: 'secp256k1' });
             if (!isValidPeerId(peerId)) {
                 throw new Error('Supplied PeerId is not valid!')
             }
-
+            console.log(config.get('displayPeerId') ? peerId.toJSON() : '');
             libp2p = await createLibP2P({ ...libp2pConfig, peerId })
-        } else {
-            const generatePeer = config.get('generatePeerWithSecp256k1Keys') as boolean;
-            if (generatePeer) {
-                const peerId = await PeerId.create({ bits: 256, keyType: 'secp256k1' });
-                if (!isValidPeerId(peerId)) {
-                    throw new Error('Supplied PeerId is not valid!')
-                }
-                console.log(config.get('displayPeerId') ? peerId.toJSON() : '');
-                libp2p = await createLibP2P({ ...libp2pConfig, peerId })
-            }
-            else {
-                libp2p = await createLibP2P(libp2pConfig)
-            }
-
         }
+        //Generate using libp2p's default (RSA 2048)
+        else {
+            libp2p = await createLibP2P(libp2pConfig)
+        }
+
     }
+
 
 
     console.log('Node started, listening on addresses:')
@@ -361,32 +422,19 @@ const main = async () => {
     const rooms = config.get('rooms') as Array<string>
 
     rooms.forEach((roomName: string) => {
-        subscribeToRoom(roomName, (message: string) => {
-
-            if (streamConnection) {
-                let notification = {
-                    type: 0, //NEW_DIRECT_MESSAGE
-                    message: { payload: message }
-                }
-
-                streamConnection.write(notification);
-            }
-
-        });
+        subscribeToRoom(roomName);
     })
 
     directChat = DirectChat.getDirectChat(libp2p);
-    directChat.on('message', (message: DirectMessage) => {
+    directChat.on('message', (directMsg: DirectMessage) => {
 
-        if (streamConnection) {
-            let notification = {
-                type: 0, //NEW_DIRECT_MESSAGE
-                message: { payload: message }
-            }
+        console.log(directMsg);
 
-            streamConnection.write(notification);
-        }
-
+        sendStreamNotification({
+            message: directMsg,
+            peerId: directMsg.from,
+            signature: null
+        });
     })
     directChat.on('error', (error: Error) => { })
     console.log('\n')
@@ -404,6 +452,7 @@ function getServer() {
     //Initiate communications node
     main();
 
+    console.log(commsApi);
     var server = new grpc.Server();
     server.addService(commsApi.CommunicationsApi.service, {
         connectToCommunicationsNode: connectToCommunicationsNode,

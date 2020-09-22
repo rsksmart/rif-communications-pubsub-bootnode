@@ -7,14 +7,13 @@
       ]
     }
   },
-    peerId: "",
+  peerId: "",
   rooms: ["0xtestroom", "0xtestroom2"],
   // Port the GRPC server is listening to
   grpcPort: 50051,
   generatePeerWithSecp256k1Keys: true,
   displayPeerId: true,
   key : {
-    createNew: false,
     password:"password",
     openSSL:true,
     privateKeyURLPath:"file:///Users/raullaprida/RIF-Comms/rif-communications-pubsub-node/test/keys/openSSL/v2/ec_key_pkcs8_v2.der",
