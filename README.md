@@ -16,9 +16,12 @@ This is a utility repo to be used by developers. The aim to provide a local libp
 
 ## Table of Contents
 
-- [Usage](#usage)
-- [Config](#config)
-- [License](#license)
+- [RIF Communications PubSub node](#rif-communications-pubsub-node)
+  - [Table of Contents](#table-of-contents)
+  - [Usage](#usage)
+  - [Config](#config)
+  - [Docker](#docker)
+  - [License](#license)
 
 ## Usage
 
@@ -57,6 +60,25 @@ peerId: {},
 // Rooms to subscribe to, strings
 rooms: []
 ```
+
+## Docker
+* Build Docker
+  * docker build --tag pubsub:1.0 .
+* Run Docker
+    * docker run -p 6012:6012 -p 6010:6010 -p 6011:6011 -d pubsub:1.0
+* Private key is used from ./docker config and ./docker/config/keys
+* Logs
+    * docker ps for container **ID**
+    * docker logs -f **ID**
+* Stop Docker
+    * docker ps for container **ID**
+    * docker rm **ID** -f
+* Keys created with OpenSSL
+  * `openssl ecparam -genkey -name secp256k1 -out ec_key.pem -param_enc explicit`
+  * `openssl pkcs8 -in ec_key.pem -topk8 -v2 aes-256-cbc -v2prf hmacWithSHA256 -outform DER -out ec_key_pkcs8_v2.der`
+  * Placed in ./docker/keys
+  * modified development_node0.json5 with correct key and file
+  * DO NOT USE FOR PROD TEST KEYS IN THIS REPO, AS EXAMPLE ONLY
 
 ## License
 
