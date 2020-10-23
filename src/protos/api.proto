@@ -7,7 +7,7 @@ service CommunicationsApi {
     //The client can be notified of events in their subscriptions
 
     //Open a data stream with the server, it can only receive messages
-    rpc ConnectToCommunicationsNode(Void) returns (stream Notification);
+    rpc ConnectToCommunicationsNode(RskAddress) returns (stream Notification);
 
     //Close the data stream
     rpc EndCommunication(Void) returns (Void);
@@ -29,11 +29,39 @@ service CommunicationsApi {
     
     //Send a direct message to a peer
     rpc SendMessage(Msg) returns (Void);
+
+    /////LUMINO SPECIFIC COMMANDS
+
+    //Obtains peerId from RSKAddress
+    rpc LocatePeerId(RskAddress) returns (RskAddress);
+
+    //Creates topic for specific peerID/Rsk Address
+    rpc CreateTopicWithPeerId(PeerId) returns (Void);
+    rpc CreateTopicWithRskAddress(RskAddress) returns (Void);
+
+    //Close Topic for a specific topicID
+    rpc CloseTopic (Channel) returns (Void);
+
+    //Send Message to Specified Topic
+    rpc SendMessageToTopic(PublishPayload) returns (Void);
+
+    //Update RSK Address after invitation
+    rpc UpdateAddress(RskAddress) returns (Void);
+
 }
 
 //The topic
 message Channel {
     string channelId = 1;
+}
+
+message RskAddress {
+    string address = 1;
+    bool exclusive= 2;
+}
+message PeerId {
+    string address = 1;
+    bool exclusive= 2;
 }
 
 /*RPC needs a message, so when there are no params to send, this empty message is used*/

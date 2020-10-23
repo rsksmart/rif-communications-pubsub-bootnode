@@ -13,6 +13,7 @@ const keyEncoder: KeyEncoder = new KeyEncoder('secp256k1')
 import cryptoS from 'libp2p-crypto'
 import { decryptPrivateKey, decryptDERPrivateKey } from './crypto'
 const secp256k1 = require('secp256k1')
+const encoder = new TextEncoder()
 
 
 var PROTO_PATH = __dirname + '/protos/api.proto';
@@ -48,6 +49,8 @@ var commsApi = protoDescriptor.communicationsapi;
     rpc ConnectToCommunicationsNode(NoParams) returns (stream Notification);
 */
 function connectToCommunicationsNode(call: any) {
+
+    //TODO: ADD STRING for RSKADDRESS
 
     let notificationMsg = {
     }
@@ -179,8 +182,55 @@ function hasSubscriber(parameters: any, callback: any): void {
     callback(status, response);
 }
 
+//////////////////////LUMINO SPECIFICS///////////////////////////
+
+async function locatePeerId (parameters: any, callback: any): Promise<void> {
+    console.log(`locatePeerID ${parameters} `)
+
+    callback(null, {});
+
+}
+
+async function createTopicWithPeerId(parameters: any, callback: any): Promise<void> {
+    console.log(`createTopicWithPeerId ${parameters} `)
+
+    callback(null, {});
+}
+
+async function createTopicWithRskAddress (parameters: any, callback: any): Promise<void> {
+    console.log(`createTopicWithRskAddress ${parameters} `)
+
+    callback(null, {});
+}
+
+async function closeTopic(parameters: any, callback: any): Promise<void> {
+    console.log(`closeTopic ${parameters} `)
+
+    callback(null, {});
+}
+
+async function sendMessageToTopic(parameters: any, callback: any): Promise<void> {
+    console.log(`sendMessageToTopic ${parameters} `)
+
+    callback(null, {});
+}
+
+async function updateAddress (parameters: any, callback: any): Promise<void> {
+    console.log(`updateAddress ${parameters} `)
+
+    callback(null, {});
+}
+
+///////////////////////////////////
+
 
 //////////////// Internal Server Functions //////////////////////
+
+async function getKey(key: any): Promise<string> {
+    const value = await libp2p.contentRouting.get(key);
+    console.log(value.toString())
+    return value
+}
 
 function isValidPeerId(peerId: PeerId): boolean {
     return (
@@ -368,7 +418,7 @@ const main = async () => {
         libp2p = await createLibP2P({ ...libp2pConfig, peerId })
 
     }
-    //Load a peerId from cleartext peerId infomartion
+    //Load a peerId from cleartext peerId information
     else if (config.has('peerId') && "" != config.get('peerId')) {
         const cnfId = config.get<{ id: string, privKey: string, pubKey: string }>('peerId')
         const peerId = await PeerId.createFromJSON(cnfId)
@@ -400,8 +450,6 @@ const main = async () => {
 
     }
 
-
-
     console.log('Node started, listening on addresses:')
 
     libp2p.multiaddrs.forEach((addr: any) => {
@@ -412,11 +460,16 @@ const main = async () => {
     libp2p.on("peer:discovery", (peerId) => {
         console.log(`Found peer ${peerId.toB58String()}`);
     });
+    const key = Buffer.from(encoder.encode('KEY'));
+    const value = Buffer.from(encoder.encode('RSKADDRESS 0'));
 
     // Listen for new connections to peers
-    libp2p.connectionManager.on("peer:connect", (connection: any) => {
+    libp2p.connectionManager.on("peer:connect", async (connection: any) => {
         console.log(`Connected to ${connection.remotePeer.toB58String()}`);
+        const test = await getKey(key);
+        console.log(test);
     });
+
 
     console.log('\nListening on topics: ')
     const rooms = config.get('rooms') as Array<string>
@@ -438,6 +491,27 @@ const main = async () => {
     })
     directChat.on('error', (error: Error) => { })
     console.log('\n')
+
+    //const key = encoder.encode('K')
+    //const value = encoder.encode('V')
+    //console.log(key, value);
+    //console.log(libp2p)
+
+
+
+    console.log("PEERID:", libp2p.peerId._idB58String)
+    if (libp2p.peerId._idB58String === "16Uiu2HAmJgg1YDeeNKxY2PJ11LCWx56spjfEJdhvD5HvSCjyszaX") {
+        console.log("WRITING VALUE")
+        await libp2p.contentRouting.put(key, value);
+    }
+
+
+    //console.log(libp2p._dht.contentRouting)
+
+
+
+
+
 }
 
 
@@ -452,7 +526,7 @@ function getServer() {
     //Initiate communications node
     main();
 
-    console.log(commsApi);
+    //console.log(commsApi);
     var server = new grpc.Server();
     server.addService(commsApi.CommunicationsApi.service, {
         connectToCommunicationsNode: connectToCommunicationsNode,
@@ -462,7 +536,14 @@ function getServer() {
         publish: publish,
         getSubscribers: getSubscribers,
         hasSubscriber: hasSubscriber,
-        sendMessage: sendMessage
+        sendMessage: sendMessage,
+        locatePeerId: locatePeerId,
+        createTopicWithPeerId: createTopicWithPeerId,
+        createTopicWithRskAddress: createTopicWithRskAddress,
+        closeTopic: closeTopic, 
+        sendMessageToTopic: sendMessageToTopic,
+        updateAddress: updateAddress,
+
     });
 
     return server;
