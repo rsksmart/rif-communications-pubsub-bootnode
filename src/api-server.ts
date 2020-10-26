@@ -243,7 +243,7 @@ async function updateAddress (parameters: any, callback: any): Promise<void> {
 
 //////////////// Internal Server Functions //////////////////////
 
-async function getKey(key: any): Promise<string> {
+async function getKey(key: any): Promise<any> {
     const value = await libp2p.contentRouting.get(key);
     console.log(value.toString())
     return value
