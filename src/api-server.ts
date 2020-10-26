@@ -1,5 +1,4 @@
 /* eslint no-console: 0 */
-
 import config from 'config'
 import { Room, createLibP2P, Message, DirectChat, DirectMessage } from '@rsksmart/rif-communications-pubsub'
 import PeerId from 'peer-id'
@@ -48,9 +47,14 @@ var commsApi = protoDescriptor.communicationsapi;
 /*Implementation of protobuf service
     rpc ConnectToCommunicationsNode(NoParams) returns (stream Notification);
 */
-function connectToCommunicationsNode(call: any) {
+async function connectToCommunicationsNode(call: any) {
 
-    //TODO: ADD STRING for RSKADDRESS
+    console.log("connectToCommunicationsNode")
+    const key = Buffer.from(encoder.encode(call.request.address));
+    const value = Buffer.from(encoder.encode(libp2p.peerId._idB58String));
+    await libp2p.contentRouting.put(key, value);
+    console.log("Adding RSKADDRESS PEER=",libp2p.peerId._idB58String, " : RSKADDRESS=",call.request.address);
+    
 
     let notificationMsg = {
     }
@@ -185,20 +189,34 @@ function hasSubscriber(parameters: any, callback: any): void {
 //////////////////////LUMINO SPECIFICS///////////////////////////
 
 async function locatePeerId (parameters: any, callback: any): Promise<void> {
-    console.log(`locatePeerID ${parameters} `)
+    let status: any = null;
+    let response: any = {};
 
-    callback(null, {});
+    try {
+        console.log(`locatePeerID ${JSON.stringify(parameters.request)} `)
+        const key = Buffer.from(encoder.encode(libp2p.peerId._idB58String));
+        const address = await getKey(key);
+        response = { address: address };
+    }
+    catch(e) {
+        status = { code: grpc.status.UNKNOWN, message: e.message }
+    }
+
+    
+
+    callback(status, response);
 
 }
 
 async function createTopicWithPeerId(parameters: any, callback: any): Promise<void> {
-    console.log(`createTopicWithPeerId ${parameters} `)
+    console.log(`createTopicWithPeerId ${JSON.stringify(parameters)} `)
 
     callback(null, {});
 }
 
 async function createTopicWithRskAddress (parameters: any, callback: any): Promise<void> {
     console.log(`createTopicWithRskAddress ${parameters} `)
+    const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload);
 
     callback(null, {});
 }
@@ -220,7 +238,6 @@ async function updateAddress (parameters: any, callback: any): Promise<void> {
 
     callback(null, {});
 }
-
 ///////////////////////////////////
 
 
@@ -466,8 +483,8 @@ const main = async () => {
     // Listen for new connections to peers
     libp2p.connectionManager.on("peer:connect", async (connection: any) => {
         console.log(`Connected to ${connection.remotePeer.toB58String()}`);
-        const test = await getKey(key);
-        console.log(test);
+        //const test = await getKey(key);
+        //console.log(test);
     });
 
 
@@ -500,10 +517,10 @@ const main = async () => {
 
 
     console.log("PEERID:", libp2p.peerId._idB58String)
-    if (libp2p.peerId._idB58String === "16Uiu2HAmJgg1YDeeNKxY2PJ11LCWx56spjfEJdhvD5HvSCjyszaX") {
+    /*if (libp2p.peerId._idB58String === "16Uiu2HAmJgg1YDeeNKxY2PJ11LCWx56spjfEJdhvD5HvSCjyszaX") {
         console.log("WRITING VALUE")
         await libp2p.contentRouting.put(key, value);
-    }
+    }*/
 
 
     //console.log(libp2p._dht.contentRouting)
@@ -543,7 +560,6 @@ function getServer() {
         closeTopic: closeTopic, 
         sendMessageToTopic: sendMessageToTopic,
         updateAddress: updateAddress,
-
     });
 
     return server;

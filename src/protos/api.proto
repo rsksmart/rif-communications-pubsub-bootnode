@@ -33,7 +33,7 @@ service CommunicationsApi {
     /////LUMINO SPECIFIC COMMANDS
 
     //Obtains peerId from RSKAddress
-    rpc LocatePeerId(RskAddress) returns (RskAddress);
+    rpc LocatePeerId(RskAddress) returns (PeerId);
 
     //Creates topic for specific peerID/Rsk Address
     rpc CreateTopicWithPeerId(PeerId) returns (Void);
@@ -169,7 +169,3 @@ message ServerNotification {
     bytes notification = 1;
     bytes payload = 2;
 }
-
-
-
-
