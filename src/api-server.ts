@@ -49,11 +49,16 @@ var commsApi = protoDescriptor.communicationsapi;
 */
 async function connectToCommunicationsNode(call: any) {
 
-    console.log("connectToCommunicationsNode")
-    const key = Buffer.from(encoder.encode(call.request.address));
+    console.log("connectToCommunicationsNode", JSON.stringify(call.request))
+    const key = Buffer.from(encoder.encode("RSK:"+call.request.address));
     const value = Buffer.from(encoder.encode(libp2p.peerId._idB58String));
-    await libp2p.contentRouting.put(key, value);
-    console.log("Adding RSKADDRESS PEER=",libp2p.peerId._idB58String, " : RSKADDRESS=",call.request.address);
+    try{
+       console.log("Adding RSKADDRESS PEER=",libp2p.peerId._idB58String, " : RSKADDRESS=",call.request.address);
+        await libp2p.contentRouting.put(key, value);
+    }
+    catch{
+
+    }
     
 
     let notificationMsg = {
@@ -193,8 +198,8 @@ async function locatePeerId (parameters: any, callback: any): Promise<void> {
     let response: any = {};
 
     try {
-        console.log(`locatePeerID ${JSON.stringify(parameters.request)} `)
-        const key = Buffer.from(encoder.encode(libp2p.peerId._idB58String));
+        console.log(`locatePeerID ${JSON.stringify(parameters.request.address)} `)
+        const key = Buffer.from(encoder.encode("RSK:"+parameters.request.address));
         const address = await getKey(key);
         response = { address: address };
     }
