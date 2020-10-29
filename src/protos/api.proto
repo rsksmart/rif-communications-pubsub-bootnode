@@ -36,8 +36,8 @@ service CommunicationsApi {
     rpc LocatePeerId(RskAddress) returns (PeerId);
 
     //Creates topic for specific peerID/Rsk Address
-    rpc CreateTopicWithPeerId(PeerId) returns (Void);
-    rpc CreateTopicWithRskAddress(RskAddress) returns (Void);
+    rpc CreateTopicWithPeerId(PeerId) returns (stream Notification);
+    rpc CreateTopicWithRskAddress(RskAddress) returns (stream Notification);
 
     //Close Topic for a specific topicID
     rpc CloseTopic (Channel) returns (Void);
