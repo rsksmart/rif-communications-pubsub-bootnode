@@ -13,6 +13,7 @@ import cryptoS from 'libp2p-crypto'
 import { decryptPrivateKey, decryptDERPrivateKey } from './crypto'
 const secp256k1 = require('secp256k1')
 const encoder = new TextEncoder()
+const decoder = new TextDecoder()
 
 
 var PROTO_PATH = __dirname + '/protos/api.proto';
@@ -24,6 +25,7 @@ let libp2p: Libp2p;
 //State of the connection with the user of the GRPC API
 let subscriptions = new Map();
 var streamConnection: any;
+var streamConnectionTopic = new Map(); //REPLACE WITH KEY/VALUE for each channelTopic
 let directChat: DirectChat;
 
 
@@ -213,29 +215,50 @@ async function locatePeerId (parameters: any, callback: any): Promise<void> {
 
 }
 
-async function createTopicWithPeerId(parameters: any, callback: any): Promise<void> {
-    console.log(`createTopicWithPeerId ${JSON.stringify(parameters)} `)
+async function createTopicWithPeerId(call: any) {
+    console.log(`createTopicWithPeerId ${JSON.stringify(call.request)} `)
+    //REFACTOR CODE
+    const status = subscribeToRoom(call.request.address);
+    streamConnectionTopic.set(call.request.address,call);
+    console.log("STATUS",status);
+    //const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload);    
 
-    callback(null, {});
+    call.write(status, {});
 }
 
-async function createTopicWithRskAddress (parameters: any, callback: any): Promise<void> {
-    console.log(`createTopicWithRskAddress ${parameters} `)
-    const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload);
+async function createTopicWithRskAddress (call: any) {
+    let status: any = null;
+    let response: any = {};
+    console.log(`createTopicWithRskAddress ${JSON.stringify(call.request)} `)
+    try {
+        console.log(`locatePeerID ${JSON.stringify(call.request.address)} `)
+        //REFACTOR CODE
+        const key = Buffer.from(encoder.encode("RSK:"+call.request.address));
+        const address = await getKey(key);
+        console.log("address",decoder.decode(address))
+        status = subscribeToRoom(decoder.decode(address));
+        streamConnectionTopic.set(decoder.decode(address),call); //REPLACE WITH KEY/VALUE INSTEAD OF HARDCODED VALUE
+        response = { address: address };
+    }
+    catch(e) {
+        status = { code: grpc.status.UNKNOWN, message: e.message }
+    }
 
-    callback(null, {});
+    call.write(status, {});
 }
 
 async function closeTopic(parameters: any, callback: any): Promise<void> {
     console.log(`closeTopic ${parameters} `)
+    //callback(unsubscribe(parameters,callback));
 
     callback(null, {});
 }
 
 async function sendMessageToTopic(parameters: any, callback: any): Promise<void> {
     console.log(`sendMessageToTopic ${parameters} `)
+    const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload);
 
-    callback(null, {});
+    callback(status, {});
 }
 
 async function updateAddress (parameters: any, callback: any): Promise<void> {
@@ -343,6 +366,15 @@ function subscribeToRoom(roomName: string): any {
 
                 }
             }
+            //TODO REPLACE FOR KEY/VALUE OF TOPICS INSTEAD OF HARDCDODE VARIABLE
+            streamConnectionTopic.get(roomName).write({
+                channelNewData: {
+                    from: message.from,
+                    data: Buffer.from(JSON.stringify(message.data)),
+                    nonce: message.seqno,
+                    channel: channels
+                }
+            });
 
             sendStreamNotification({
                 channelNewData: {
