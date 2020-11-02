@@ -58,7 +58,9 @@
   },
   "devDependencies": {
     "@types/config": "0.0.36",
-    "tasegir": "^1.8.0"
+    "tasegir": "^1.8.0",
+    "ts-node-dev": ^"1.0.0",
+    "typescript": ^"4.0.5"
   },
   "engines": {
     "node": ">=10.0.0",
