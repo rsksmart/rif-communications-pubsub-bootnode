@@ -1,0 +1,19 @@
+#!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-var-requires */
+
+const fs = require('fs')
+const path = require('path')
+const project = path.join(__dirname, '../.tasegir.js')
+const dev = fs.existsSync(project)
+
+// node-config looks for the config folder based on CWD, we need to bind it to the released configs.
+if (!process.env.NODE_CONFIG_DIR) {
+  const path = require('path')
+  process.env.NODE_CONFIG_DIR = path.join(__dirname, '..', 'config')
+}
+
+if (!process.env.NODE_ENV && !dev) {
+  process.env.NODE_ENV = 'production'
+}
+
+require('../lib/index.js')

@@ -29,6 +29,7 @@
     "compile:watch": "tasegir compile -- --watch",
     "types-check": "tasegir types-check",
     "exec": "tasegir run --watch ./src/index.ts",
+    "generate-peerid": "tasegir run ./src/generate-peerid.ts",
     "lint": "tasegir lint",
     "release": "tasegir release",
     "build": "tasegir build",

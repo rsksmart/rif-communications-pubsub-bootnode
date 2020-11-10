@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /* eslint no-console: 0 */
 
 import config from 'config'
@@ -29,7 +30,7 @@ ${data}
 `
 }
 
-const main = async () => {
+export default async function main () {
   const libp2pConfig = config.get('libp2p') as Record<string, any>
 
   let libp2p: Libp2p
