@@ -2,8 +2,8 @@
   libp2p: {
     addresses: {
       listen: [
-        "/ip4/127.0.0.1/tcp/6010",
-        "/ip4/127.0.0.1/tcp/6011/ws"
+        "/ip4/127.0.0.1/tcp/6020",
+        "/ip4/127.0.0.1/tcp/6021/ws"
       ]
     }
   },
@@ -12,11 +12,11 @@
     createNew: false,
     password:"1234",
     openSSL:true,
-    privateKeyURLPath:"file:////home/git/Desktop/rsk/rif-communications-pubsub-node/config/keys/node0/ec_key_pkcs8_v2.der",
+    privateKeyURLPath:"file:////home/git/Desktop/rsk/rif-communications-pubsub-node/config/keys/node1/ec_key_pkcs8_v2.der",
     type: "DER"
   },
   rooms: ["0xtestroom", "0xtestroom6", "0xtestroom3"],
-  grpcPort: 6012,
+  grpcPort: 6013,
   displayPeerId: true,
   generatePeerWithSecp256k1Keys: true,
 }

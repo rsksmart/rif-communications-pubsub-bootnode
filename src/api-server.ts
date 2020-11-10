@@ -50,6 +50,8 @@ var commsApi = protoDescriptor.communicationsapi;
     rpc ConnectToCommunicationsNode(NoParams) returns (stream Notification);
 */
 async function connectToCommunicationsNode(call: any) {
+    let status: any = null;
+    let response: any = {};
 
     console.log("connectToCommunicationsNode", JSON.stringify(call.request))
     const key = Buffer.from(encoder.encode("RSK:"+call.request.address));
@@ -58,8 +60,8 @@ async function connectToCommunicationsNode(call: any) {
        console.log("Adding RSKADDRESS PEER=",libp2p.peerId._idB58String, " : RSKADDRESS=",call.request.address);
         await libp2p.contentRouting.put(key, value);
     }
-    catch{
-
+    catch(e) {
+        status = { code: grpc.status.UNKNOWN, message: e.message }
     }
     
 
