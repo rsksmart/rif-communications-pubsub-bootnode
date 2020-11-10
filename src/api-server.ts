@@ -52,7 +52,7 @@ var commsApi = protoDescriptor.communicationsapi;
 async function connectToCommunicationsNode(call: any) {
 
     console.log("connectToCommunicationsNode", JSON.stringify(call.request))
-    const key = Buffer.from(encoder.encode("RSK:"+call.request.address));
+    const key = Buffer.from(encoder.encode(call.request.address));
     const value = Buffer.from(encoder.encode(libp2p.peerId._idB58String));
     try{
        console.log("Adding RSKADDRESS PEER=",libp2p.peerId._idB58String, " : RSKADDRESS=",call.request.address);
@@ -201,7 +201,7 @@ async function locatePeerId (parameters: any, callback: any): Promise<void> {
 
     try {
         console.log(`locatePeerID ${JSON.stringify(parameters.request.address)} `)
-        const key = Buffer.from(encoder.encode("RSK:"+parameters.request.address));
+        const key = Buffer.from(encoder.encode(parameters.request.address));
         const address = await getKey(key);
         response = { address: address };
     }
@@ -233,7 +233,7 @@ async function createTopicWithRskAddress (call: any) {
     try {
         console.log(`locatePeerID ${JSON.stringify(call.request.address)} `)
         //REFACTOR CODE
-        const key = Buffer.from(encoder.encode("RSK:"+call.request.address));
+        const key = Buffer.from(encoder.encode(call.request.address));
         const address = await getKey(key);
         console.log("address",decoder.decode(address))
         status = subscribeToRoom(decoder.decode(address));
