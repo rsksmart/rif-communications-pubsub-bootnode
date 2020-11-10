@@ -1,0 +1,18 @@
+{
+  libp2p: {
+    addresses: {
+      listen: {
+        "__name": "RIFC_LISTEN_ADDR",
+        "__format": "json"
+      }
+    },
+  },
+  rooms: {
+    "__name": "RIFC_ROOMS",
+    "__format": "json"
+  },
+  peerId: {
+    "__name": "RIFC_PEER_ID",
+    "__format": "json"
+  }
+}
