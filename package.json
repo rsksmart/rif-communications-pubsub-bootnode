@@ -55,6 +55,7 @@
   },
   "types": "types/index.d.ts",
   "contributors": [
+    "Adam Uhlíř <adam@uhlir.dev>",
     "Vojtech Simetka <vojtech@simetka.cz>"
   ]
 }
