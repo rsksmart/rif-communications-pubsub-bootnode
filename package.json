@@ -1,15 +1,16 @@
 {
-  "name": "@rsksmart/rif-communications-pubsub-node",
-  "version": "0.1.0-dev",
-  "description": "Node using the PubSub module",
+  "name": "@rsksmart/rif-communications-pubsub-bootnode",
+  "version": "0.1.0-dev.0",
+  "description": "Simple bootnode for RIF Communications PubSub",
   "keywords": [
     "RIF",
     "Communications",
-    "PubSub"
+    "PubSub",
+    "bootnode"
   ],
-  "homepage": "https://github.com/rsksmart/rif-communications-pubsub-node#readme",
+  "homepage": "https://github.com/rsksmart/rif-communications-pubsub-bootnode#readme",
   "bugs": {
-    "url": "https://github.com/rsksmart/rif-communications-pubsub-node/issues"
+    "url": "https://github.com/rsksmart/rif-communications-pubsub-bootnode/issues"
   },
   "license": "MIT",
   "author": {
@@ -23,24 +24,26 @@
     "types"
   ],
   "main": "lib/index.js",
-  "repository": "https://github.com/rsksmart/rif-communications-pubsub-node",
+  "bin": {
+    "rif-communications-pubsub-bootnode": "./bin/run"
+  },
+  "repository": "https://github.com/rsksmart/rif-communications-pubsub-bootnode",
   "scripts": {
     "compile": "tasegir compile",
     "compile:watch": "tasegir compile -- --watch",
     "types-check": "tasegir types-check",
-    "exec": "tasegir run --watch ./src/index.ts",
+    "start": "tasegir run --watch ./src/index.ts",
     "generate-peerid": "tasegir run ./src/generate-peerid.ts",
     "lint": "tasegir lint",
-    "release": "tasegir release",
+    "release": "tasegir release --no-docs --no-build --no-test",
     "build": "tasegir build",
     "tasegir:link": "ln -s ./node_modules/tasegir/src/config/tsconfig.json ./tsconfig.json && ln -s ./node_modules/tasegir/src/config/eslintrc.js ./.eslintrc.js"
   },
   "dependencies": {
-    "@rsksmart/rif-communications-pubsub": "0.1.0-dev.8",
+    "@rsksmart/rif-communications-pubsub": "0.1.0-dev.10",
     "chalk": "^4.1.0",
-    "config": "^3.3.1",
-    "libp2p": "^0.28.10",
-    "peer-id": "^0.14.0"
+    "config": "^3.3.2",
+    "peer-id": "^0.14.2"
   },
   "devDependencies": {
     "@types/config": "0.0.36",
@@ -52,6 +55,7 @@
   },
   "types": "types/index.d.ts",
   "contributors": [
+    "Adam Uhlíř <adam@uhlir.dev>",
     "Vojtech Simetka <vojtech@simetka.cz>"
   ]
 }
