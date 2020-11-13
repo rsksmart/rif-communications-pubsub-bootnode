@@ -27,13 +27,13 @@ This can be also used for local development where you can define the list of Roo
 Example of usage:
 
 ```
-npm run exec
+npm start
 ```
 
 Spawns a new libp2p node with new PeerId listening to TCP connections on port 6030.
 
 ```
-NODE_ENV=develop npm run exec
+NODE_ENV=develop npm start
 ```
 
 Spawns a new libp2p node with PeerId `QmbQJ4FyVBAar7rLwc1jjeJ6Nba6w2ddqczamJL6vTDrwm` listening to websocket connections on port 6030 and joins rooms `0xtestroom` and `0xtestroom2`. Any peers joining and leaving the room will be logged as well as any messages in th following format:

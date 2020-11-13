@@ -12,7 +12,6 @@ import type Libp2p from 'libp2p'
 function isValidPeerId (peerId: PeerId): boolean {
   return (
     peerId.isValid() &&
-    Buffer.isBuffer(peerId.id) &&
     Boolean(peerId.toB58String()) &&
     Boolean(peerId.privKey) &&
     Boolean(peerId.pubKey)
