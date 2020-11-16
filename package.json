@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@grpc/proto-loader": "^0.5.5",
+    "@lifeomic/attempt": "^3.0.0",
     "@rsksmart/rif-communications-pubsub": "0.1.0-dev.9",
     "@types/asn1js": "0.0.2",
     "@types/node-forge": "^0.9.5",

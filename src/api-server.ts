@@ -15,6 +15,8 @@ const secp256k1 = require('secp256k1')
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
+import { retry } from '@lifeomic/attempt';
+
 
 var PROTO_PATH = __dirname + '/protos/api.proto';
 var grpc = require('grpc');
@@ -27,6 +29,11 @@ let subscriptions = new Map();
 var streamConnection: any;
 var streamConnectionTopic = new Map(); //REPLACE WITH KEY/VALUE for each channelTopic
 let directChat: DirectChat;
+
+let OK_STATUS =  {
+    code: grpc.status.OK,
+    message: ""
+}
 
 
 
@@ -44,6 +51,20 @@ var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
 
 var commsApi = protoDescriptor.communicationsapi;
 
+
+async function addRskAddressToDHT(rskaddress: any,peerId: any) {
+        const key = Buffer.from(encoder.encode(rskaddress));
+        const value = Buffer.from(encoder.encode(peerId));
+
+        console.log("Adding RSKADDRESS PEER=",peerId, " : RSKADDRESS=",rskaddress);
+        try {
+            await libp2p.contentRouting.put(key, value);             
+            return true;
+        } catch (error) {
+            return false;
+        }
+}
+
 //Implementation of GRPC API
 
 /*Implementation of protobuf service
@@ -54,16 +75,20 @@ async function connectToCommunicationsNode(call: any) {
     let response: any = {};
 
     console.log("connectToCommunicationsNode", JSON.stringify(call.request))
-    const key = Buffer.from(encoder.encode(call.request.address));
-    const value = Buffer.from(encoder.encode(libp2p.peerId._idB58String));
-    try{
-       console.log("Adding RSKADDRESS PEER=",libp2p.peerId._idB58String, " : RSKADDRESS=",call.request.address);
-        await libp2p.contentRouting.put(key, value);
+           
+    try {
+        const result = await retry(async (context) => {
+        addRskAddressToDHT(call.request.address,libp2p.peerId._idB58String)
+    }, {
+        delay: 1000,
+        maxAttempts: 3,
+        initialDelay: 3000,
+      });
+
+
+    } catch (err) {
+        console.log(err)
     }
-    catch(e) {
-        status = { code: grpc.status.UNKNOWN, message: e.message }
-    }
-    
 
     let notificationMsg = {
     }
@@ -212,7 +237,6 @@ async function locatePeerId (parameters: any, callback: any): Promise<void> {
     }
 
     
-
     callback(status, response);
 
 }
@@ -229,7 +253,7 @@ async function createTopicWithPeerId(call: any) {
 }
 
 async function createTopicWithRskAddress (call: any) {
-    let status: any = null;
+    let status: any = OK_STATUS;
     let response: any = {};
     console.log(`createTopicWithRskAddress ${JSON.stringify(call.request)} `)
     try {
@@ -274,9 +298,34 @@ async function updateAddress (parameters: any, callback: any): Promise<void> {
 //////////////// Internal Server Functions //////////////////////
 
 async function getKey(key: any): Promise<any> {
-    const value = await libp2p.contentRouting.get(key);
-    console.log(value.toString())
-    return value
+    let value:any = null
+
+    try {
+        value = await retry(async (context) => {
+            let val = null;
+            try {
+                val =  await libp2p.contentRouting.get(key);
+                if (val == null) {
+                    return Promise.reject("NO VALUE")
+                }
+                return Promise.resolve(val)
+            } catch (error) {
+                return Promise.reject(error)
+            }
+        },
+        {
+            delay: 1000,
+            maxAttempts: 3,
+            initialDelay: 3000,
+        });     
+    } catch (err) {
+        console.log(err)
+        return value
+    }
+
+    return value;
+
+    
 }
 
 function isValidPeerId(peerId: PeerId): boolean {
@@ -308,7 +357,7 @@ function sendStreamNotification(message: any) {
 
 function subscribeToRoom(roomName: string): any {
 
-    let status = null;
+    let status = OK_STATUS;
 
     if (libp2p == null) {
         status = { code: grpc.status.UNKNOWN, message: "Libp2p instance not configured" }
