@@ -6,6 +6,17 @@
         "__format": "json"
       }
     },
+    config: {
+      peerDiscovery: {
+        bootstrap: {
+          enabled: 'RIFC_BOOTSTRAP_ENABLED',
+          list: {
+            "__name": "RIFC_BOOTSTRAP_LIST",
+            "__format": "json"
+          }
+        }
+      }
+    }
   },
   rooms: {
     "__name": "RIFC_ROOMS",
