@@ -305,6 +305,7 @@ async function getKey(key: any): Promise<any> {
             let val = null;
             try {
                 val =  await libp2p.contentRouting.get(key);
+                val = decoder.decode(val)
                 if (val == null) {
                     return Promise.reject("NO VALUE")
                 }
@@ -417,6 +418,8 @@ function subscribeToRoom(roomName: string): any {
                 }
             }
             //TODO REPLACE FOR KEY/VALUE OF TOPICS INSTEAD OF HARDCDODE VARIABLE
+            console.log("roomName",roomName)
+            console.log("streamConnectionTopic",streamConnectionTopic)
             streamConnectionTopic.get(roomName).write({
                 channelNewData: {
                     from: message.from,
