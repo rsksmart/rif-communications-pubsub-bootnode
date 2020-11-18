@@ -328,15 +328,14 @@ async function getKey(key: any): Promise<any> {
     
 }
 
-function isValidPeerId(peerId: PeerId): boolean {
+function isValidPeerId (peerId: PeerId): boolean {
     return (
-        peerId.isValid() &&
-        (Buffer.isBuffer(peerId.id) || peerId.id instanceof Uint8Array) &&
-        Boolean(peerId.toB58String()) &&
-        Boolean(peerId.privKey) &&
-        Boolean(peerId.pubKey)
+      peerId.isValid() &&
+      Boolean(peerId.toB58String()) &&
+      Boolean(peerId.privKey) &&
+      Boolean(peerId.pubKey)
     )
-}
+  }
 
 function formatMessage(msg: Message): string {
     const prefix = '    '
