@@ -24,7 +24,7 @@ COPY --chown=node:node bin ./bin/
 COPY --chown=node:node config ./config/
 
 ENV NODE_ENV 'production'
-EXPOSE 6666 6667
+EXPOSE 8998 8999
 
 ENTRYPOINT [ "./bin/run" ]
 

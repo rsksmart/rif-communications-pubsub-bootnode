@@ -36,7 +36,7 @@ Spawns a new libp2p node with new PeerId listening to TCP connections on port 60
 NODE_ENV=develop npm start
 ```
 
-Spawns a new libp2p node with PeerId `QmbQJ4FyVBAar7rLwc1jjeJ6Nba6w2ddqczamJL6vTDrwm` listening to websocket connections on port 6030 and joins rooms `0xtestroom` and `0xtestroom2`. Any peers joining and leaving the room will be logged as well as any messages in th following format:
+Spawns a new libp2p node with PeerId `QmbQJ4FyVBAar7rLwc1jjeJ6Nba6w2ddqczamJL6vTDrwm` listening to websocket connections on port 8999 for WebSockets and port 8998 for TCP. If you configure a room to join, then any peers joining and leaving the room will be logged as well as any messages in th following format:
 
 ```
 <roomName>: peer <peerId> joined
@@ -64,6 +64,8 @@ rooms: []
 
  - `RIFC_ROOMS` (json/array): same as `rooms` option
  - `RIFC_LISTEN_ADDR` (json/array): same as `libp2p.address.listen`
+ - `RIFC_COMMS_BOOTSTRAP_ENABLED` (`true`/`false`) - Defines if bootstrap should be used. Same as libp2p config's [`bootstrap.enabled`](https://github.com/libp2p/js-libp2p-bootstrap) property.
+ - `RIFC_COMMS_BOOTSTRAP_LIST` (`array`) - Defines an array of multiaddress that the Pinner's libp2p node will use to bootstrap its connectivity. Same as libp2p config's [`bootstrap.list`](https://github.com/libp2p/js-libp2p-bootstrap) property.
  - `RIFC_PEER_ID` (json): Peer ID JSON like specified in [`js-peer-id](https://github.com/libp2p/js-peer-id#createfromjsonobj)
 
 ## Deployment
