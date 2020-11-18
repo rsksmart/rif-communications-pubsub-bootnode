@@ -1,4 +1,4 @@
-# RIF Communications PubSub node
+# RIF Communications PubSub bootnode
 
 [![CircleCI](https://flat.badgen.net/circleci/github/rsksmart/rif-communications-pubsub-node/master)](https://circleci.com/gh/rsksmart/rif-communications-pubsub-node/)
 [![Dependency Status](https://david-dm.org/rsksmart/rif-communications-pubsub-node.svg?style=flat-square)](https://david-dm.org/rsksmart/rif-communications-pubsub-node)
@@ -10,9 +10,11 @@
 ![](https://img.shields.io/badge/npm-%3E%3D6.0.0-orange.svg?style=flat-square)
 ![](https://img.shields.io/badge/Node.js-%3E%3D10.0.0-orange.svg?style=flat-square)
 
-> Simple base node for RIF Communications PubSub
+> Simple boot node for RIF Communications PubSub
 
-This is a utility repo to be used by developers. The aim to provide a local libp2p node which serves as bootstrap node for projects which use [`rif-commmunications-pubsub`](https://github.com/rsksmart/rif-communications-pubsub)
+The aim to provide a libp2p node which serves as bootstrap node for projects which use [`rif-commmunications-pubsub`](https://github.com/rsksmart/rif-communications-pubsub). 
+
+This can be also used for local development where you can define the list of Rooms that will be listened on and messages printed out to STDOUT.
 
 ## Table of Contents
 
@@ -28,13 +30,13 @@ This is a utility repo to be used by developers. The aim to provide a local libp
 Example of usage:
 
 ```
-npm run exec
+npm start
 ```
 
 Spawns a new libp2p node with new PeerId listening to TCP connections on port 6030.
 
 ```
-NODE_ENV=develop npm run exec
+NODE_ENV=develop npm start
 ```
 
 Spawns a new libp2p node with PeerId `QmbQJ4FyVBAar7rLwc1jjeJ6Nba6w2ddqczamJL6vTDrwm` listening to websocket connections on port 6030 and joins rooms `0xtestroom` and `0xtestroom2`. Any peers joining and leaving the room will be logged as well as any messages in th following format:
@@ -79,6 +81,25 @@ rooms: []
   * Placed in ./docker/keys
   * modified development_node0.json5 with correct key and file
   * DO NOT USE FOR PROD TEST KEYS IN THIS REPO, AS EXAMPLE ONLY
+### Supported env. variables
+
+ - `RIFC_ROOMS` (json/array): same as `rooms` option
+ - `RIFC_LISTEN_ADDR` (json/array): same as `libp2p.address.listen`
+ - `RIFC_PEER_ID` (json): Peer ID JSON like specified in [`js-peer-id](https://github.com/libp2p/js-peer-id#createfromjsonobj)
+
+## Deployment
+
+This project can be deployed with Dockerfile bundled with this repo. Ports 6666 and 6667 have to be published.
+Also if this is deployed on production level stable PeerId should be used. If PeerId is not defined than over restarts it 
+will change, which should not happen for production boot nodes. 
+
+You can generate one using `npm run generate-peerid` and then set that either with config file or `RIFC_PEER_ID` env. variable (set the variable as the whole generated JSON).
+
+```
+$ PEER_ID=$(npm run generate-peerid) // This should be stored in some file somewhere
+$ docker build -t rif-comunication-bootnode .  
+$ docker run -e RIFC_PEER_ID="$PEER_ID" -p 6666 -p 6667 -it rif-comunication-bootnode  
+```
 
 ## License
 

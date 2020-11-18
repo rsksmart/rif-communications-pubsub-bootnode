@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /* eslint no-console: 0 */
 
 import config from 'config'
@@ -11,7 +12,6 @@ import type Libp2p from 'libp2p'
 function isValidPeerId (peerId: PeerId): boolean {
   return (
     peerId.isValid() &&
-    Buffer.isBuffer(peerId.id) &&
     Boolean(peerId.toB58String()) &&
     Boolean(peerId.privKey) &&
     Boolean(peerId.pubKey)
@@ -29,7 +29,7 @@ ${data}
 `
 }
 
-const main = async () => {
+export default async function main () {
   const libp2pConfig = config.get('libp2p') as Record<string, any>
 
   let libp2p: Libp2p

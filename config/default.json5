@@ -14,8 +14,7 @@
       }
     }
   },
-  // Peer ID in a JSON format
-  peerId: {},
+
   // Rooms to subscribe to, strings
   rooms: [],
   // Port the GRPC server is listening to
