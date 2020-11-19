@@ -261,12 +261,13 @@ async function createTopicWithRskAddress (call: any) {
         //REFACTOR CODE
         const key = Buffer.from(encoder.encode(call.request.address));
         const address = await getKey(key);
-        console.log("address",decoder.decode(address))
-        status = subscribeToRoom(decoder.decode(address));
-        streamConnectionTopic.set(decoder.decode(address),call); //REPLACE WITH KEY/VALUE INSTEAD OF HARDCODED VALUE
+        console.log("address",address)
+        status = subscribeToRoom(address);
+        streamConnectionTopic.set(address,call); //REPLACE WITH KEY/VALUE INSTEAD OF HARDCODED VALUE
         response = { address: address };
     }
     catch(e) {
+        console.log(e)
         status = { code: grpc.status.UNKNOWN, message: e.message }
     }
 
@@ -417,17 +418,19 @@ function subscribeToRoom(roomName: string): any {
 
                 }
             }
-            //TODO REPLACE FOR KEY/VALUE OF TOPICS INSTEAD OF HARDCDODE VARIABLE
+            
             console.log("roomName",roomName)
-            console.log("streamConnectionTopic",streamConnectionTopic)
-            streamConnectionTopic.get(roomName).write({
-                channelNewData: {
-                    from: message.from,
-                    data: Buffer.from(JSON.stringify(message.data)),
-                    nonce: message.seqno,
-                    channel: channels
-                }
-            });
+            if (streamConnectionTopic.get(roomName) !== undefined) {
+                streamConnectionTopic.get(roomName).write({
+                    channelNewData: {
+                        from: message.from,
+                        data: Buffer.from(JSON.stringify(message.data)),
+                        nonce: message.seqno,
+                        channel: channels
+                    }
+                });
+            }
+            
 
             sendStreamNotification({
                 channelNewData: {
