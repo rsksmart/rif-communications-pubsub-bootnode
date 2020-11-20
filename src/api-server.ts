@@ -116,6 +116,7 @@ async function connectToCommunicationsNode(call: any) {
 */
 //TODO the function must write to the stream not to a console log
 function subscribe(parameters: any, callback: any): void {
+    console.log("subscribe",parameters.request.channelId)
     let status: any = subscribeToRoom(parameters.request.channelId);
 
     callback(status, {});
@@ -243,7 +244,6 @@ async function locatePeerId (parameters: any, callback: any): Promise<void> {
 
 async function createTopicWithPeerId(call: any) {
     console.log(`createTopicWithPeerId ${JSON.stringify(call.request)} `)
-    //REFACTOR CODE
     const status = subscribeToRoom(call.request.address);
     streamConnectionTopic.set(call.request.address,call);
     console.log("STATUS",status);
@@ -258,12 +258,12 @@ async function createTopicWithRskAddress (call: any) {
     console.log(`createTopicWithRskAddress ${JSON.stringify(call.request)} `)
     try {
         console.log(`locatePeerID ${JSON.stringify(call.request.address)} `)
-        //REFACTOR CODE
         const key = Buffer.from(encoder.encode(call.request.address));
         const address = await getKey(key);
         console.log("address",address)
         status = subscribeToRoom(address);
-        streamConnectionTopic.set(address,call); //REPLACE WITH KEY/VALUE INSTEAD OF HARDCODED VALUE
+        streamConnectionTopic.set(address,call);
+        //await subscription
         response = { address: address };
     }
     catch(e) {
@@ -365,8 +365,7 @@ function subscribeToRoom(roomName: string): any {
         console.log('Libp2p instance not configured')
     }
     else if (subscriptions.has(roomName)) {
-        console.log('already subscribed')
-        status = { code: grpc.status.INVALID_ARGUMENT, message: `Already subscribed to ${roomName}` }
+        console.log(`Already subscribed to ${roomName}`)
     }
     else {
         const room = new Room(libp2p, roomName)
