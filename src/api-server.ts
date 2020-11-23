@@ -261,13 +261,15 @@ async function createTopicWithRskAddress (call: any) {
         const key = Buffer.from(encoder.encode(call.request.address));
         const address = await getKey(key);
         console.log("address",address)
-        status = subscribeToRoom(address);
-        streamConnectionTopic.set(address,call);
-        //await subscription
-        response = { address: address };
+        if (address === null) {
+            throw new Error("RSK Address Unknown");
+        } else {
+            status = subscribeToRoom(address);
+            streamConnectionTopic.set(address,call);
+            response = { address: address };
+        }
     }
     catch(e) {
-        console.log(e)
         status = { code: grpc.status.UNKNOWN, message: e.message }
     }
 
