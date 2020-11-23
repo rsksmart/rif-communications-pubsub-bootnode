@@ -381,6 +381,7 @@ function subscribeToRoom(roomName: string): any {
                     peerId: peer
                 }
             });
+            subscriptions.set(roomName, room);
 
         });
 
@@ -394,6 +395,7 @@ function subscribeToRoom(roomName: string): any {
                     peerId: peer
                 }
             });
+            subscriptions.delete(roomName)
 
         });
 
@@ -442,7 +444,7 @@ function subscribeToRoom(roomName: string): any {
         });
 
 
-        subscriptions.set(roomName, room);
+        
     }
     return status;
 }
