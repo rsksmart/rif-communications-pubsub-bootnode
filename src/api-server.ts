@@ -207,6 +207,7 @@ function hasSubscriber(parameters: any, callback: any): void {
 
     let status: any = null;
     let response: any = {};
+    console.log("hasSubscriber", parameters)
 
     if (subscriptions.has(parameters.request.channel.channelId)) {
         const room: Room = subscriptions.get(parameters.request.channel.channelId);
@@ -372,6 +373,10 @@ function subscribeToRoom(roomName: string): any {
     else {
         const room = new Room(libp2p, roomName)
         console.log(` - New subscription to ${roomName}`)
+        if (libp2p.peerId._idB58String == roomName) {
+            console.log("JOIN SELF")
+            subscriptions.set(roomName, room);
+        }
 
         room.on('peer:joined', (peer) => {
             console.log(`${roomName}: ${chalk.green(`peer ${peer} joined`)}`);
