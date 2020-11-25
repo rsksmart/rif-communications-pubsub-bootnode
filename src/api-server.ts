@@ -245,36 +245,53 @@ async function locatePeerId (parameters: any, callback: any): Promise<void> {
 
 async function createTopicWithPeerId(call: any) {
     console.log(`createTopicWithPeerId ${JSON.stringify(call.request)} `)
-    const status = subscribeToRoom(call.request.address);
+    await subscribeToRoom(call.request.address);
     streamConnectionTopic.set(call.request.address,call);
-    console.log("STATUS",status);
-    //const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload);    
+    const notificationMsg = {
+        channelPeerJoined: {
+            channel: {
+                channelId: call.request.address
+            },
+            peerId: call.request.address
+        }
+    }    
 
-    call.write(status, {});
+    call.write(notificationMsg);
 }
 
 async function createTopicWithRskAddress (call: any) {
     let status: any = OK_STATUS;
     let response: any = {};
+    const notificationMsg = {
+        channelPeerJoined: {
+            channel: {
+                channelId: ""
+            },
+            peerId: ""
+        }
+    }
     console.log(`createTopicWithRskAddress ${JSON.stringify(call.request)} `)
     try {
         console.log(`locatePeerID ${JSON.stringify(call.request.address)} `)
-        const key = Buffer.from(encoder.encode(call.request.address));
+        const key = Buffer.from(encoder.encode(call.request.address));        
         const address = await getKey(key);
         console.log("address",address)
         if (address === null) {
             throw new Error("RSK Address Unknown");
         } else {
-            status = subscribeToRoom(address);
+            status = await subscribeToRoom(address);
             streamConnectionTopic.set(address,call);
             response = { address: address };
+            notificationMsg.channelPeerJoined.channel.channelId = address;
+            notificationMsg.channelPeerJoined.peerId = address;
         }
     }
     catch(e) {
         status = { code: grpc.status.UNKNOWN, message: e.message }
     }
-
-    call.write(status, {});
+    
+    
+    call.write(notificationMsg);
 }
 
 async function closeTopic(parameters: any, callback: any): Promise<void> {
@@ -327,10 +344,8 @@ async function getKey(key: any): Promise<any> {
         console.log(err)
         return value
     }
-
     return value;
 
-    
 }
 
 function isValidPeerId (peerId: PeerId): boolean {
@@ -359,16 +374,19 @@ function sendStreamNotification(message: any) {
     }
 }
 
-function subscribeToRoom(roomName: string): any {
+async function subscribeToRoom(roomName: string): Promise<any> {
 
-    let status = OK_STATUS;
+    let p = new Promise((resolve, reject) => {
+        let status = OK_STATUS;
 
     if (libp2p == null) {
         status = { code: grpc.status.UNKNOWN, message: "Libp2p instance not configured" }
         console.log('Libp2p instance not configured')
+        reject(status)
     }
     else if (subscriptions.has(roomName)) {
         console.log(`Already subscribed to ${roomName}`)
+        resolve(`Already subscribed to ${roomName}`)
     }
     else {
         const room = new Room(libp2p, roomName)
@@ -376,6 +394,7 @@ function subscribeToRoom(roomName: string): any {
         if (libp2p.peerId._idB58String == roomName) {
             console.log("JOIN SELF")
             subscriptions.set(roomName, room);
+            resolve(status);
         }
 
         room.on('peer:joined', (peer) => {
@@ -389,6 +408,7 @@ function subscribeToRoom(roomName: string): any {
                 }
             });
             subscriptions.set(roomName, room);
+            resolve(status);
 
         });
 
@@ -403,6 +423,7 @@ function subscribeToRoom(roomName: string): any {
                 }
             });
             subscriptions.delete(roomName)
+            resolve(status);
 
         });
 
@@ -448,12 +469,16 @@ function subscribeToRoom(roomName: string): any {
                     channel: channels
                 }
             });
+            resolve(status);
         });
 
 
         
     }
-    return status;
+      });
+      return p;
+
+    
 }
 
 async function publishToRoom(roomName: string, message: string): Promise<any> {
@@ -645,7 +670,7 @@ function getServer() {
     main();
 
     //console.log(commsApi);
-    var server = new grpc.Server();
+    const server = new grpc.Server();
     server.addService(commsApi.CommunicationsApi.service, {
         connectToCommunicationsNode: connectToCommunicationsNode,
         endCommunication: endCommunication,

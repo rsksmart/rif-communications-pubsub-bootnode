@@ -33,6 +33,7 @@
     "compile:watch": "tasegir compile -- --watch",
     "types-check": "tasegir types-check",
     "api-server": "tasegir run --watch ./src/api-server.ts",
+    "api-server-debug": "tasegir run --watch --inspect --inspect-brk ./src/api-server.ts",
     "api-client": "tasegir run --watch ./src/api-client.ts ",
     "create-key": "tasegir run --watch ./src/key-utils.ts ",
     "start": "tasegir run --watch ./src/index.ts",
