@@ -1,5 +1,5 @@
 /* eslint no-console: 0 */
-import config from 'config'
+import config, { has } from 'config'
 import { Room, createLibP2P, Message, DirectChat, DirectMessage } from '@rsksmart/rif-communications-pubsub'
 import PeerId from 'peer-id'
 import chalk from 'chalk'
@@ -211,7 +211,13 @@ function hasSubscriber(parameters: any, callback: any): void {
 
     if (subscriptions.has(parameters.request.channel.channelId)) {
         const room: Room = subscriptions.get(parameters.request.channel.channelId);
-        const hasPeer: boolean = room.hasPeer(parameters.request.peerId);
+        var hasPeer: boolean = false;
+
+        if (libp2p.peerId._idB58String == parameters.request.channel.channelId) {
+            hasPeer = true;
+        } else {
+            hasPeer = room.hasPeer(parameters.request.peerId);
+        }
 
         response = { value: hasPeer };
     }
