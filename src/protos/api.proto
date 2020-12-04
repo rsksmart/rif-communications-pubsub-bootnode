@@ -107,6 +107,7 @@ message Notification {
         ChannelPeerLeft channelPeerLeft = 5;
         ChannelPeerJoined channelPeerJoined = 6;
         ServerNotification serverNotification = 7;
+        SubscribeError subscribeError = 8;
     }
 }
 
@@ -168,4 +169,11 @@ message ChannelPeerJoined {
 message ServerNotification {
     bytes notification = 1;
     bytes payload = 2;
+}
+
+
+//A subscribe has failled
+message SubscribeError {
+    Channel channel = 1;
+    string reason = 2;
 }

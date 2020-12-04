@@ -291,13 +291,22 @@ async function createTopicWithRskAddress (call: any) {
             notificationMsg.channelPeerJoined.channel.channelId = address;
             notificationMsg.channelPeerJoined.peerId = address;
         }
+        call.write(notificationMsg);
     }
     catch(e) {
-        status = { code: grpc.status.UNKNOWN, message: e.message }
+        const subscribeErrorMsg = {
+            subscribeError: {
+                channel: {
+                    channelId: ""
+                },
+                reason: e.message
+            }
+        }
+        console.log("ERROR",e.message)
+        call.write(subscribeErrorMsg)
     }
     
-    
-    call.write(notificationMsg);
+     
 }
 
 async function closeTopic(parameters: any, callback: any): Promise<void> {
@@ -479,7 +488,6 @@ async function subscribeToRoom(roomName: string): Promise<any> {
         });
 
 
-        
     }
       });
       return p;
