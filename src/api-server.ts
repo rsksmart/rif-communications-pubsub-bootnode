@@ -208,22 +208,26 @@ function hasSubscriber(parameters: any, callback: any): void {
     let status: any = null;
     let response: any = {};
     console.log("hasSubscriber", parameters)
-
-    if (subscriptions.has(parameters.request.channel.channelId)) {
-        const room: Room = subscriptions.get(parameters.request.channel.channelId);
-        var hasPeer: boolean = false;
-
-        if (libp2p.peerId._idB58String == parameters.request.channel.channelId) {
-            hasPeer = true;
-        } else {
-            hasPeer = room.hasPeer(parameters.request.peerId);
+    try {
+        if (subscriptions.has(parameters.request.channel.channelId)) {
+            const room: Room = subscriptions.get(parameters.request.channel.channelId);
+            var hasPeer: boolean = false;
+    
+            if (libp2p.peerId._idB58String == parameters.request.channel.channelId) {
+                hasPeer = true;
+            } else {
+                hasPeer = room.hasPeer(parameters.request.peerId);
+            }
+    
+            response = { value: hasPeer };
         }
-
-        response = { value: hasPeer };
+        else {
+            response = { value: false };
+        }    
+    } catch (error) {
+        response = { value: false };
     }
-    else {
-        status = { code: grpc.status.INVALID_ARGUMENT, message: `You are not subscribed to ${parameters.request.channel.channelId}` };
-    }
+    
 
     callback(status, response);
 }
@@ -408,8 +412,6 @@ async function subscribeToRoom(roomName: string): Promise<any> {
         console.log(` - New subscription to ${roomName}`)
         if (libp2p.peerId._idB58String == roomName) {
             console.log("JOIN SELF")
-            subscriptions.set(roomName, room);
-            resolve(status);
         }
 
         room.on('peer:joined', (peer) => {
@@ -487,7 +489,8 @@ async function subscribeToRoom(roomName: string): Promise<any> {
             resolve(status);
         });
 
-
+        subscriptions.set(roomName, room);
+        resolve(status);
     }
       });
       return p;
