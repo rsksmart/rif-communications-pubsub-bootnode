@@ -43,7 +43,7 @@ service CommunicationsApi {
     rpc CloseTopic (Channel) returns (Void);
 
     //Send Message to Specified Topic
-    rpc SendMessageToTopic(PublishPayload) returns (Void);
+    rpc SendMessageToTopic(RskPayload) returns (Void);
 
     //Update RSK Address after invitation
     rpc UpdateAddress(RskAddress) returns (Void);
@@ -76,6 +76,12 @@ message Msg {
 //Message used to publish a message in a specific topic
 message PublishPayload {
     Channel topic = 1;
+    Msg message = 2;
+}
+
+//Message used to publish a message in a rsk address
+message RskPayload {
+    RskAddress address = 1;
     Msg message = 2;
 }
 

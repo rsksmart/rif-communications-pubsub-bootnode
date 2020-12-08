@@ -322,6 +322,14 @@ async function closeTopic(parameters: any, callback: any): Promise<void> {
 
 async function sendMessageToTopic(parameters: any, callback: any): Promise<void> {
     console.log(`sendMessageToTopic ${parameters} `)
+    const key = Buffer.from(encoder.encode(call.request.address));        
+        const address = await getKey(key);
+        console.log("address",address)
+        if (address === null) {
+            throw new Error("RSK Address Unknown");
+        } else {
+            
+        }
     const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload);
 
     callback(status, {});
