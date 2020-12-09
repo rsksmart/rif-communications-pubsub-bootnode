@@ -78,18 +78,17 @@ async function connectToCommunicationsNode(call: any) {
            
     try {
         const result = await retry(async (context) => {
-        addRskAddressToDHT(call.request.address,libp2p.peerId._idB58String)
+        await addRskAddressToDHT(call.request.address,libp2p.peerId._idB58String)
     }, {
-        delay: 1000,
+        delay: 1200,
         maxAttempts: 3,
-        initialDelay: 3000,
       });
 
 
     } catch (err) {
         console.log(err)
     }
-
+    
     let notificationMsg = {
     }
 
@@ -107,7 +106,6 @@ async function connectToCommunicationsNode(call: any) {
             payload: Buffer.from('connection to server already exists', 'utf8')
         }
     }
-
     call.write(notificationMsg);
 }
 
@@ -321,7 +319,7 @@ async function closeTopic(parameters: any, callback: any): Promise<void> {
 }
 
 async function sendMessageToTopic(parameters: any, callback: any): Promise<void> {
-    console.log(`sendMessageToTopic ${parameters} `)
+    console.log(`sendMessageToTopic ${JSON.stringify(parameters)} `)
     const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload);
 
     callback(status, {});
@@ -338,32 +336,17 @@ async function updateAddress (parameters: any, callback: any): Promise<void> {
 //////////////// Internal Server Functions //////////////////////
 
 async function getKey(key: any): Promise<any> {
-    let value:any = null
-
-    try {
-        value = await retry(async (context) => {
-            let val = null;
-            try {
-                val =  await libp2p.contentRouting.get(key);
-                val = decoder.decode(val)
-                if (val == null) {
-                    return Promise.reject("NO VALUE")
-                }
-                return Promise.resolve(val)
-            } catch (error) {
-                return Promise.reject(error)
+        return await retry(async (context) => {
+            const val =  await libp2p.contentRouting.get(key);
+            if (!val) {
+                throw new Error("Value not found");
             }
+            return decoder.decode(val)
         },
         {
-            delay: 1000,
-            maxAttempts: 3,
-            initialDelay: 3000,
-        });     
-    } catch (err) {
-        console.log(err)
-        return value
-    }
-    return value;
+            delay: 1200,
+            maxAttempts: 3
+        }); 
 
 }
 
