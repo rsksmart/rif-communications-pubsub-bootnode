@@ -43,7 +43,10 @@ service CommunicationsApi {
     rpc CloseTopic (Channel) returns (Void);
 
     //Send Message to Specified Topic
-    rpc SendMessageToTopic(RskAddressPublish) returns (Void);
+    rpc SendMessageToTopic(PublishPayload) returns (Void);
+
+    // Send message to topic binded to an specific RSK address
+    rpc SendMessageToRskAddress(RskAddressPublish) returns (Void);
 
     //Update RSK Address after invitation
     rpc UpdateAddress(RskAddress) returns (Void);

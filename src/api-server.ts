@@ -5,17 +5,17 @@ import PeerId from 'peer-id'
 import chalk from 'chalk'
 import { inspect } from 'util'
 import type Libp2p from 'libp2p'
-
+import libP2PFactory from './service/factory'
 import fs from 'fs'
-import KeyEncoder from 'key-encoder'
-const keyEncoder: KeyEncoder = new KeyEncoder('secp256k1')
 import cryptoS from 'libp2p-crypto'
 import { decryptPrivateKey, decryptDERPrivateKey } from './crypto'
-const secp256k1 = require('secp256k1')
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
 import { retry } from '@lifeomic/attempt';
+import {isValidPeerId} from "./peer-utils";
+import DhtService from "./service/dht";
+import EncodingService from "./service/encoding";
 
 
 var PROTO_PATH = __dirname + '/protos/api.proto';
@@ -23,12 +23,16 @@ var grpc = require('grpc');
 var protoLoader = require('@grpc/proto-loader');
 var parseArgs = require('minimist');
 let libp2p: Libp2p;
+let encoding: EncodingService;
+let dht: DhtService;
 
 //State of the connection with the user of the GRPC API
 let subscriptions = new Map();
 var streamConnection: any;
 var streamConnectionTopic = new Map(); //REPLACE WITH KEY/VALUE for each channelTopic
 let directChat: DirectChat;
+
+
 
 let OK_STATUS =  {
     code: grpc.status.OK,
@@ -238,8 +242,7 @@ async function locatePeerId (parameters: any, callback: any): Promise<void> {
 
     try {
         console.log(`locatePeerID ${JSON.stringify(parameters.request.address)} `)
-        const key = Buffer.from(encoder.encode(parameters.request.address));
-        const address = await getKey(key);
+        const address = await dht.getPeerIdByRskAddress(parameters.request.address);
         response = { address: address };
     }
     catch(e) {
@@ -281,9 +284,8 @@ async function createTopicWithRskAddress (call: any) {
     console.log(`createTopicWithRskAddress ${JSON.stringify(call.request)} `)
     try {
         console.log(`locatePeerID ${JSON.stringify(call.request.address)} `)
-        const key = Buffer.from(encoder.encode(call.request.address));
-        const address = await getKey(key);
-        console.log("address",address)
+        const address = await dht.getPeerIdByRskAddress(call.request.address);
+        console.log("address", address)
         if (address === null) {
             throw new Error("RSK Address Unknown");
         } else {
@@ -318,18 +320,21 @@ async function closeTopic(parameters: any, callback: any): Promise<void> {
     callback(null, {});
 }
 
-async function sendMessageToTopic({request}: any, callback: any): Promise<void> {
-    console.log(`sendMessageToTopic ${JSON.stringify(request)}`)
+async function sendMessageToTopic(parameters: any, callback: any): Promise<void> {
+    console.log(`sendMessageToTopic ${parameters} `)
+    const status = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload);
+
+    callback(status, {});
+}
+
+async function sendMessageToRskAddress({request}: any, callback: any): Promise<void> {
+    console.log(`sendMessageToRskAddress ${JSON.stringify(request)}`)
     const {address, message: {payload}} = request;
-    const topic = await resolvePeerIdFromRskAddress(address);
+    const topic = await dht.getPeerIdByRskAddress(address);
     const status = await publishToRoom(topic, payload);
     callback(status, {});
 }
 
-async function resolvePeerIdFromRskAddress(address: string): Promise<string>{
-    const key = Buffer.from(encoder.encode());
-    return await getKey(key);
-}
 
 async function updateAddress (parameters: any, callback: any): Promise<void> {
     console.log(`updateAddress ${parameters} `)
@@ -341,29 +346,6 @@ async function updateAddress (parameters: any, callback: any): Promise<void> {
 
 //////////////// Internal Server Functions //////////////////////
 
-async function getKey(key: any): Promise<string> {
-        return await retry(async (context) => {
-            const val =  await libp2p.contentRouting.get(key);
-            if (!val) {
-                throw new Error("Value not found");
-            }
-            return decoder.decode(val)
-        },
-        {
-            delay: 1200,
-            maxAttempts: 3
-        });
-
-}
-
-function isValidPeerId (peerId: PeerId): boolean {
-    return (
-      peerId.isValid() &&
-      Boolean(peerId.toB58String()) &&
-      Boolean(peerId.privKey) &&
-      Boolean(peerId.pubKey)
-    )
-  }
 
 function formatMessage(msg: Message): string {
     const prefix = '    '
@@ -506,99 +488,12 @@ async function publishToRoom(roomName: string, message: string): Promise<any> {
 }
 
 
-function loadEncryptedPeerId(keyFile: URL, keyType: string, password: string, isOpenSSL: boolean): Promise<PeerId> {
-    //Import the test key file created with OpenSSL
-    //Test using a secp256k1 private key imported from OpenSSL
-    const privateKey: Buffer = fs.readFileSync(keyFile);
-    let privKeyArray = null;
-
-    if (keyType == "PEM") {
-        if (password == "") { //unencrypted
-            privKeyArray = new Uint8Array(Buffer.from(keyEncoder.encodePrivate(privateKey.toString(), 'pem', 'raw'), 'hex'));
-        }
-        else {
-            if (isOpenSSL) {
-                throw new Error('OpenSSL encrypted keys must be in DER');
-            }
-            else {
-                privKeyArray = new Uint8Array(decryptPrivateKey(privateKey.toString(), password));
-            }
-        }
-    }
-    else {
-        //DER
-        if (password == "") { //not encrypted
-            privKeyArray = new Uint8Array(Buffer.from(keyEncoder.encodePrivate(privateKey.toString(), 'der', 'raw'), 'hex'));
-        }
-        else {
-            console.log("Loading encrypted DER key");
-            privKeyArray = new Uint8Array(decryptDERPrivateKey(privateKey, password));
-        }
-    }
-
-
-    //Calculate public key from the private key 
-    let pubKey: Uint8Array = secp256k1.publicKeyCreate(privKeyArray)
-
-    //Instantiate the libp2p-formatted private key
-    const libp2pPrivKey = new cryptoS.keys.supportedKeys.secp256k1.Secp256k1PrivateKey(privKeyArray, pubKey);
-
-
-    return PeerId.createFromPrivKey(libp2pPrivKey.bytes);
-}
 
 const main = async () => {
 
-    const libp2pConfig = config.get('libp2p') as Record<string, any>
-
-
-    const keyConfig = config.get('key') as Record<string, any>
-
-    //Load a peerId from an encrypted private key
-    if (config.has('key') && "" != config.get('key')) {
-
-        const peerId: PeerId = await loadEncryptedPeerId(new URL(keyConfig.get('privateKeyURLPath')),
-            keyConfig.type, keyConfig.password, keyConfig.openSSL);
-
-        if (!isValidPeerId(peerId)) {
-            throw new Error('Supplied PeerId is not valid!')
-        }
-
-        libp2p = await createLibP2P({ ...libp2pConfig, peerId })
-
-    }
-    //Load a peerId from cleartext peerId information
-    else if (config.has('peerId') && "" != config.get('peerId')) {
-        const cnfId = config.get<{ id: string, privKey: string, pubKey: string }>('peerId')
-        const peerId = await PeerId.createFromJSON(cnfId)
-
-        if (!isValidPeerId(peerId)) {
-            throw new Error('Supplied PeerId is not valid!')
-        }
-
-        libp2p = await createLibP2P({ ...libp2pConfig, peerId })
-    }
-    // Create a new Peer
-    else {
-
-        const generatePeer = config.get('generatePeerWithSecp256k1Keys') as boolean;
-
-        //Generate using secp256k1 
-        if (generatePeer) {
-            const peerId = await PeerId.create({ bits: 256, keyType: 'secp256k1' });
-            if (!isValidPeerId(peerId)) {
-                throw new Error('Supplied PeerId is not valid!')
-            }
-            console.log(config.get('displayPeerId') ? peerId.toJSON() : '');
-            libp2p = await createLibP2P({ ...libp2pConfig, peerId })
-        }
-        //Generate using libp2p's default (RSA 2048)
-        else {
-            libp2p = await createLibP2P(libp2pConfig)
-        }
-
-    }
-
+    libp2p = await libP2PFactory.fromConfig(config);
+    encoding = new EncodingService(encoder, decoder)
+    dht = new DhtService(libp2p.contentRouting, encoding);
     console.log('Node started, listening on addresses:')
 
     libp2p.multiaddrs.forEach((addr: any) => {
@@ -640,27 +535,7 @@ const main = async () => {
     })
     directChat.on('error', (error: Error) => { })
     console.log('\n')
-
-    //const key = encoder.encode('K')
-    //const value = encoder.encode('V')
-    //console.log(key, value);
-    //console.log(libp2p)
-
-
-
     console.log("PEERID:", libp2p.peerId._idB58String)
-    /*if (libp2p.peerId._idB58String === "16Uiu2HAmJgg1YDeeNKxY2PJ11LCWx56spjfEJdhvD5HvSCjyszaX") {
-        console.log("WRITING VALUE")
-        await libp2p.contentRouting.put(key, value);
-    }*/
-
-
-    //console.log(libp2p._dht.contentRouting)
-
-
-
-
-
 }
 
 
@@ -691,6 +566,7 @@ function getServer() {
         createTopicWithRskAddress: createTopicWithRskAddress,
         closeTopic: closeTopic,
         sendMessageToTopic: sendMessageToTopic,
+        sendMessageToRskAddress: sendMessageToRskAddress,
         updateAddress: updateAddress,
     });
 
