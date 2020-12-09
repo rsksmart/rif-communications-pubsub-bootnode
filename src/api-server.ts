@@ -58,7 +58,7 @@ async function addRskAddressToDHT(rskaddress: any,peerId: any) {
 
         console.log("Adding RSKADDRESS PEER=",peerId, " : RSKADDRESS=",rskaddress);
         try {
-            await libp2p.contentRouting.put(key, value);             
+            await libp2p.contentRouting.put(key, value);
             return true;
         } catch (error) {
             return false;
@@ -75,7 +75,7 @@ async function connectToCommunicationsNode(call: any) {
     let response: any = {};
 
     console.log("connectToCommunicationsNode", JSON.stringify(call.request))
-           
+
     try {
         const result = await retry(async (context) => {
         await addRskAddressToDHT(call.request.address,libp2p.peerId._idB58String)
@@ -88,7 +88,7 @@ async function connectToCommunicationsNode(call: any) {
     } catch (err) {
         console.log(err)
     }
-    
+
     let notificationMsg = {
     }
 
@@ -210,22 +210,22 @@ function hasSubscriber(parameters: any, callback: any): void {
         if (subscriptions.has(parameters.request.channel.channelId)) {
             const room: Room = subscriptions.get(parameters.request.channel.channelId);
             var hasPeer: boolean = false;
-    
+
             if (libp2p.peerId._idB58String == parameters.request.channel.channelId) {
                 hasPeer = true;
             } else {
                 hasPeer = room.hasPeer(parameters.request.peerId);
             }
-    
+
             response = { value: hasPeer };
         }
         else {
             response = { value: false };
-        }    
+        }
     } catch (error) {
         response = { value: false };
     }
-    
+
 
     callback(status, response);
 }
@@ -246,7 +246,7 @@ async function locatePeerId (parameters: any, callback: any): Promise<void> {
         status = { code: grpc.status.UNKNOWN, message: e.message }
     }
 
-    
+
     callback(status, response);
 
 }
@@ -262,7 +262,7 @@ async function createTopicWithPeerId(call: any) {
             },
             peerId: call.request.address
         }
-    }    
+    }
 
     call.write(notificationMsg);
 }
@@ -281,7 +281,7 @@ async function createTopicWithRskAddress (call: any) {
     console.log(`createTopicWithRskAddress ${JSON.stringify(call.request)} `)
     try {
         console.log(`locatePeerID ${JSON.stringify(call.request.address)} `)
-        const key = Buffer.from(encoder.encode(call.request.address));        
+        const key = Buffer.from(encoder.encode(call.request.address));
         const address = await getKey(key);
         console.log("address",address)
         if (address === null) {
@@ -307,8 +307,8 @@ async function createTopicWithRskAddress (call: any) {
         console.log("ERROR",e.message)
         call.write(subscribeErrorMsg)
     }
-    
-     
+
+
 }
 
 async function closeTopic(parameters: any, callback: any): Promise<void> {
@@ -318,11 +318,17 @@ async function closeTopic(parameters: any, callback: any): Promise<void> {
     callback(null, {});
 }
 
-async function sendMessageToTopic(parameters: any, callback: any): Promise<void> {
-    console.log(`sendMessageToTopic ${JSON.stringify(parameters)} `)
-    const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload);
-
+async function sendMessageToTopic({request}: any, callback: any): Promise<void> {
+    console.log(`sendMessageToTopic ${JSON.stringify(request)}`)
+    const {address, message: {payload}} = request;
+    const topic = await resolvePeerIdFromRskAddress(address);
+    const status = await publishToRoom(topic, payload);
     callback(status, {});
+}
+
+async function resolvePeerIdFromRskAddress(address: string): Promise<string>{
+    const key = Buffer.from(encoder.encode());
+    return await getKey(key);
 }
 
 async function updateAddress (parameters: any, callback: any): Promise<void> {
@@ -335,7 +341,7 @@ async function updateAddress (parameters: any, callback: any): Promise<void> {
 
 //////////////// Internal Server Functions //////////////////////
 
-async function getKey(key: any): Promise<any> {
+async function getKey(key: any): Promise<string> {
         return await retry(async (context) => {
             const val =  await libp2p.contentRouting.get(key);
             if (!val) {
@@ -346,7 +352,7 @@ async function getKey(key: any): Promise<any> {
         {
             delay: 1200,
             maxAttempts: 3
-        }); 
+        });
 
 }
 
@@ -447,7 +453,7 @@ async function subscribeToRoom(roomName: string): Promise<any> {
 
                 }
             }
-            
+
             console.log("roomName",roomName)
             if (streamConnectionTopic.get(roomName) !== undefined) {
                 streamConnectionTopic.get(roomName).write({
@@ -459,7 +465,7 @@ async function subscribeToRoom(roomName: string): Promise<any> {
                     }
                 });
             }
-            
+
 
             sendStreamNotification({
                 channelNewData: {
@@ -478,7 +484,7 @@ async function subscribeToRoom(roomName: string): Promise<any> {
       });
       return p;
 
-    
+
 }
 
 async function publishToRoom(roomName: string, message: string): Promise<any> {
@@ -683,7 +689,7 @@ function getServer() {
         locatePeerId: locatePeerId,
         createTopicWithPeerId: createTopicWithPeerId,
         createTopicWithRskAddress: createTopicWithRskAddress,
-        closeTopic: closeTopic, 
+        closeTopic: closeTopic,
         sendMessageToTopic: sendMessageToTopic,
         updateAddress: updateAddress,
     });
