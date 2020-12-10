@@ -329,7 +329,7 @@ async function sendMessageToTopic(parameters: any, callback: any): Promise<void>
 
 async function sendMessageToRskAddress({request}: any, callback: any): Promise<void> {
     console.log(`sendMessageToRskAddress ${JSON.stringify(request)}`)
-    const {address, message: {payload}} = request;
+    const {receiver: {address}, message: {payload}} = request;
     const topic = await dht.getPeerIdByRskAddress(address);
     const status = await publishToRoom(topic, payload);
     callback(status, {});
