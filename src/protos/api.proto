@@ -45,6 +45,9 @@ service CommunicationsApi {
     //Send Message to Specified Topic
     rpc SendMessageToTopic(PublishPayload) returns (Void);
 
+    // Send message to topic binded to an specific RSK address
+    rpc SendMessageToRskAddress(RskAddressPublish) returns (Void);
+
     //Update RSK Address after invitation
     rpc UpdateAddress(RskAddress) returns (Void);
 
@@ -59,6 +62,7 @@ message RskAddress {
     string address = 1;
     bool exclusive= 2;
 }
+
 message PeerId {
     string address = 1;
     bool exclusive= 2;
@@ -79,6 +83,10 @@ message PublishPayload {
     Msg message = 2;
 }
 
+message RskAddressPublish {
+    RskAddress receiver = 1;
+    Msg message = 2;
+}
 
 // Set of peerIDs subscribed to a specific channel
 message Subscribers {
