@@ -234,6 +234,16 @@ function hasSubscriber(parameters: any, callback: any): void {
     callback(status, response);
 }
 
+function isSubscribed({request: subscriber}: any, callback: any): void {
+    console.log("isSubscribed", subscriber)
+    try {
+        const peerId = dht.getPeerIdByRskAddress(subscriber.address);
+        callback(null, { value: subscriptions.has(peerId) });
+    } catch (error) {
+        callback(null, { value: false });
+    }
+}
+
 //////////////////////LUMINO SPECIFICS///////////////////////////
 
 async function locatePeerId (parameters: any, callback: any): Promise<void> {
@@ -316,7 +326,7 @@ async function createTopicWithRskAddress (call: any) {
 async function closeTopic(parameters: any, callback: any): Promise<void> {
     console.log(`closeTopic ${parameters} `)
     //callback(unsubscribe(parameters,callback));
-
+    subscriptions
     callback(null, {});
 }
 
@@ -560,6 +570,7 @@ function getServer() {
         publish: publish,
         getSubscribers: getSubscribers,
         hasSubscriber: hasSubscriber,
+        isSubscribed: isSubscribed,
         sendMessage: sendMessage,
         locatePeerId: locatePeerId,
         createTopicWithPeerId: createTopicWithPeerId,
