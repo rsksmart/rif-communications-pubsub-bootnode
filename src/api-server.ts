@@ -27,7 +27,7 @@ let encoding: EncodingService;
 let dht: DhtService;
 
 //State of the connection with the user of the GRPC API
-let subscriptions = new Map();
+const subscriptions = new Map<string, Room>();
 var streamConnection: any;
 var streamConnectionTopic = new Map(); //REPLACE WITH KEY/VALUE for each channelTopic
 let directChat: DirectChat;
@@ -55,34 +55,17 @@ var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
 
 var commsApi = protoDescriptor.communicationsapi;
 
-
-async function addRskAddressToDHT(rskaddress: any,peerId: any) {
-        const key = Buffer.from(encoder.encode(rskaddress));
-        const value = Buffer.from(encoder.encode(peerId));
-
-        console.log("Adding RSKADDRESS PEER=",peerId, " : RSKADDRESS=",rskaddress);
-        try {
-            await libp2p.contentRouting.put(key, value);
-            return true;
-        } catch (error) {
-            return false;
-        }
-}
-
 //Implementation of GRPC API
 
 /*Implementation of protobuf service
     rpc ConnectToCommunicationsNode(NoParams) returns (stream Notification);
 */
 async function connectToCommunicationsNode(call: any) {
-    let status: any = null;
-    let response: any = {};
-
     console.log("connectToCommunicationsNode", JSON.stringify(call.request))
 
     try {
-        const result = await retry(async (context) => {
-        await addRskAddressToDHT(call.request.address,libp2p.peerId._idB58String)
+        await retry(async (context) => {
+        await dht.addRskAddressPeerId(call.request.address,libp2p.peerId._idB58String)
     }, {
         delay: 1200,
         maxAttempts: 3,
@@ -152,8 +135,8 @@ function unsubscribe(parameters: any, callback: any): void {
     let status: any = null;
 
     if (subscriptions.has(parameters.request.channelId)) {
-        let room: Room = subscriptions.get(parameters.request.channelId);
-        room.leave();
+        const room = subscriptions.get(parameters.request.channelId);
+        room?.leave();
         subscriptions.delete(parameters.request.channelId);
     }
     else {
@@ -190,8 +173,8 @@ function getSubscribers(parameters: any, callback: any): void {
     let response: any = {};
 
     if (subscriptions.has(parameters.request.channelId)) {
-        let room: Room = subscriptions.get(parameters.request.channelId);
-        const peers: string[] = room.peers;
+        let room = subscriptions.get(parameters.request.channelId);
+        const peers = room?.peers;
         response = { peerId: peers };
     }
     else {
@@ -212,14 +195,9 @@ function hasSubscriber(parameters: any, callback: any): void {
     console.log("hasSubscriber", parameters)
     try {
         if (subscriptions.has(parameters.request.channel.channelId)) {
-            const room: Room = subscriptions.get(parameters.request.channel.channelId);
-            var hasPeer: boolean = false;
-
-            if (libp2p.peerId._idB58String == parameters.request.channel.channelId) {
-                hasPeer = true;
-            } else {
-                hasPeer = room.hasPeer(parameters.request.peerId);
-            }
+            const room = subscriptions.get(parameters.request.channel.channelId);
+            const hasPeer = libp2p.peerId._idB58String === parameters.request.channel.channelId
+                    || room?.hasPeer(parameters.request.peerId);
 
             response = { value: hasPeer };
         }
@@ -232,6 +210,16 @@ function hasSubscriber(parameters: any, callback: any): void {
 
 
     callback(status, response);
+}
+
+async function IsSubscribedToRskAddress({request: subscriber}: any, callback: any): Promise<void> {
+    console.log("IsSubscribedToRskAddress", subscriber)
+    try {
+        const peerId = await dht.getPeerIdByRskAddress(subscriber.address);
+        callback(null, { value: subscriptions.has(peerId) });
+    } catch (error) {
+        callback(null, { value: false });
+    }
 }
 
 //////////////////////LUMINO SPECIFICS///////////////////////////
@@ -313,11 +301,24 @@ async function createTopicWithRskAddress (call: any) {
 
 }
 
-async function closeTopic(parameters: any, callback: any): Promise<void> {
-    console.log(`closeTopic ${parameters} `)
-    //callback(unsubscribe(parameters,callback));
-
-    callback(null, {});
+async function closeTopicWithRskAddress({request: subscriber}: any, callback: any): Promise<void> {
+    console.log(`closeTopic ${JSON.stringify(subscriber)} `)
+    try {
+        const peerId = await dht.getPeerIdByRskAddress(subscriber.address);
+        if (subscriptions.has(peerId)) {
+            const room = subscriptions.get(peerId);
+            room?.leave();
+            subscriptions.delete(peerId)
+            callback();
+        } else {
+            callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: `Peer was not subscribed to ${subscriber.address}`
+            })
+        }
+    } catch (error) {
+        callback({ status: grpc.status.NOT_FOUND, message: error.message });
+    }
 }
 
 async function sendMessageToTopic(parameters: any, callback: any): Promise<void> {
@@ -395,7 +396,6 @@ async function subscribeToRoom(roomName: string): Promise<any> {
                     peerId: peer
                 }
             });
-            subscriptions.set(roomName, room);
             resolve(status);
 
         });
@@ -410,7 +410,6 @@ async function subscribeToRoom(roomName: string): Promise<any> {
                     peerId: peer
                 }
             });
-            subscriptions.delete(roomName)
             resolve(status);
 
         });
@@ -480,8 +479,8 @@ async function publishToRoom(roomName: string, message: string): Promise<any> {
         status = { code: grpc.status.INVALID_ARGUMENT, message: `Not subscribed to ${roomName}` }
     }
     else {
-        const room: Room = subscriptions.get(roomName);
-        await room.broadcast(message);
+        const room = subscriptions.get(roomName);
+        await room?.broadcast(message);
     }
 
     return status;
@@ -560,11 +559,12 @@ function getServer() {
         publish: publish,
         getSubscribers: getSubscribers,
         hasSubscriber: hasSubscriber,
+        IsSubscribedToRskAddress: IsSubscribedToRskAddress,
         sendMessage: sendMessage,
         locatePeerId: locatePeerId,
         createTopicWithPeerId: createTopicWithPeerId,
         createTopicWithRskAddress: createTopicWithRskAddress,
-        closeTopic: closeTopic,
+        closeTopicWithRskAddress: closeTopicWithRskAddress,
         sendMessageToTopic: sendMessageToTopic,
         sendMessageToRskAddress: sendMessageToRskAddress,
         updateAddress: updateAddress,
