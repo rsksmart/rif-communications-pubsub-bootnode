@@ -1,6 +1,6 @@
 /* eslint no-console: 0 */
 import config, { has } from 'config'
-import { Room, createLibP2P, Message, DirectChat, DirectMessage } from '@rsksmart/rif-communications-pubsub'
+import { Room, createLibP2P, Message, DirectChat, DirectMessage, JsonSerializable } from '@rsksmart/rif-communications-pubsub'
 import PeerId from 'peer-id'
 import chalk from 'chalk'
 import { inspect } from 'util'
@@ -16,6 +16,7 @@ import { retry } from '@lifeomic/attempt';
 import {isValidPeerId} from "./peer-utils";
 import DhtService from "./service/dht";
 import EncodingService from "./service/encoding";
+import { JsonObject } from '@rsksmart/rif-communications-pubsub/types/definitions'
 
 
 var PROTO_PATH = __dirname + '/protos/api.proto';
@@ -446,16 +447,13 @@ async function subscribeToRoom(roomName: string): Promise<any> {
 
             console.log("roomName",roomName)
             if (streamConnectionTopic.get(roomName) !== undefined ) {
-                //Obtengo la lista de map《rsk,write》
-                //Itero hasta obtener el rsk que busco y hago get de ese elemento
-                //Le ejecuto un write solo a el.
                 for (let key of streamConnectionTopic.get(roomName).keys()) {
-                    console.log(message)
-                    if (key === message.data) {
+                    const payload = message.data as JsonObject
+                    if (key === payload.to) {
                         streamConnectionTopic.get(roomName).get(key).write({
                             channelNewData: {
                                 from: message.from,
-                                data: Buffer.from(JSON.stringify(message.data)),
+                                data: Buffer.from(JSON.stringify(payload.message)),
                                 nonce: message.seqno,
                                 channel: channels
                             }
