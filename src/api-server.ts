@@ -275,20 +275,16 @@ async function createTopicWithRskAddress (call: any) {
         console.log(`locatePeerID ${JSON.stringify(rskAddress)} `)
         const peerId = await dht.getPeerIdByRskAddress(rskAddress);
         console.log("address", peerId)
-        if (peerId === null) {
-            throw new Error("RSK Address Unknown");
+        await subscribeToRoom(peerId);
+        if (streamConnectionTopic.has(peerId)) {
+            streamConnectionTopic.get(peerId).set(rskAddress,call);
         } else {
-            status = await subscribeToRoom(peerId);
-            if (streamConnectionTopic.has(peerId)) {
-                streamConnectionTopic.get(peerId).set(rskAddress,call);
-            } else {
-                const rskAddresses = new Map([[rskAddress,call]])    
-                streamConnectionTopic.set(peerId,rskAddresses);    
-            }
-            response = { address: peerId };
-            notificationMsg.channelPeerJoined.channel.channelId = peerId;
-            notificationMsg.channelPeerJoined.peerId = peerId;
+            const rskAddresses = new Map([[rskAddress,call]])    
+            streamConnectionTopic.set(peerId,rskAddresses);    
         }
+        notificationMsg.channelPeerJoined.channel.channelId = peerId;
+        notificationMsg.channelPeerJoined.peerId = peerId;
+        
         call.write(notificationMsg);
     }
     catch(e) {
@@ -442,21 +438,15 @@ async function subscribeToRoom(roomName: string): Promise<any> {
 
             console.log("roomName",roomName)
             if (streamConnectionTopic.get(roomName) !== undefined ) {
-                for (let key of streamConnectionTopic.get(roomName).keys()) {
-                    const payload = message.data as JsonObject
-                    if (key === payload.to) {
-                        streamConnectionTopic.get(roomName).get(key).write({
-                            channelNewData: {
-                                from: message.from,
-                                data: Buffer.from(JSON.stringify(payload.message)),
-                                nonce: message.seqno,
-                                channel: channels
-                            }
-                        });
-                        break;
+                const payload = message.data as JsonObject
+                streamConnectionTopic.get(roomName)?.get(payload.to)?.write({
+                    channelNewData: {
+                        from: message.from,
+                        data: Buffer.from(JSON.stringify(payload.message)),
+                        nonce: message.seqno,
+                        channel: channels
                     }
-                }
-                
+                });
             }
 
 
