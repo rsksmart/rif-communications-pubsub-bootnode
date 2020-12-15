@@ -1,4 +1,4 @@
-import EncodingService from "./encoding";
+import EncodingService from "./EncodingService";
 import {retry} from "@lifeomic/attempt";
 
 class DHTService {
