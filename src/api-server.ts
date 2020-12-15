@@ -1,6 +1,6 @@
 /* eslint no-console: 0 */
 import config, { has } from 'config'
-import { Room, createLibP2P, Message, DirectChat, DirectMessage } from '@rsksmart/rif-communications-pubsub'
+import { Room, createLibP2P, Message, DirectChat, DirectMessage, JsonSerializable } from '@rsksmart/rif-communications-pubsub'
 import PeerId from 'peer-id'
 import chalk from 'chalk'
 import { inspect } from 'util'
@@ -16,6 +16,7 @@ import { retry } from '@lifeomic/attempt';
 import {isValidPeerId} from "./peer-utils";
 import DhtService from "./service/dht";
 import EncodingService from "./service/encoding";
+import { JsonObject } from '@rsksmart/rif-communications-pubsub/types/definitions'
 
 
 var PROTO_PATH = __dirname + '/protos/api.proto';
@@ -29,7 +30,7 @@ let dht: DhtService;
 //State of the connection with the user of the GRPC API
 const subscriptions = new Map<string, Room>();
 var streamConnection: any;
-var streamConnectionTopic = new Map(); //REPLACE WITH KEY/VALUE for each channelTopic
+var streamConnectionTopic = new Map();
 let directChat: DirectChat;
 
 
@@ -112,9 +113,8 @@ function subscribe(parameters: any, callback: any): void {
 */
 async function publish(parameters: any, callback: any): Promise<void> {
     //TODO if there's no active stream the server should warn the user
-
     console.log(`publishing ${parameters.request.message.payload} in topic ${parameters.request.topic.channelId} `)
-    const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload);
+    const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload,parameters.request.topic.channelId);
 
     callback(status, {});
 }
@@ -271,18 +271,20 @@ async function createTopicWithRskAddress (call: any) {
     }
     console.log(`createTopicWithRskAddress ${JSON.stringify(call.request)} `)
     try {
-        console.log(`locatePeerID ${JSON.stringify(call.request.address)} `)
-        const address = await dht.getPeerIdByRskAddress(call.request.address);
-        console.log("address", address)
-        if (address === null) {
-            throw new Error("RSK Address Unknown");
+        const rskAddress = call.request.address;
+        console.log(`locatePeerID ${JSON.stringify(rskAddress)} `)
+        const peerId = await dht.getPeerIdByRskAddress(rskAddress);
+        console.log("address", peerId)
+        await subscribeToRoom(peerId);
+        if (streamConnectionTopic.has(peerId)) {
+            streamConnectionTopic.get(peerId).set(rskAddress,call);
         } else {
-            status = await subscribeToRoom(address);
-            streamConnectionTopic.set(address,call);
-            response = { address: address };
-            notificationMsg.channelPeerJoined.channel.channelId = address;
-            notificationMsg.channelPeerJoined.peerId = address;
+            const rskAddresses = new Map([[rskAddress,call]])    
+            streamConnectionTopic.set(peerId,rskAddresses);    
         }
+        notificationMsg.channelPeerJoined.channel.channelId = peerId;
+        notificationMsg.channelPeerJoined.peerId = peerId;
+        
         call.write(notificationMsg);
     }
     catch(e) {
@@ -322,8 +324,8 @@ async function closeTopicWithRskAddress({request: subscriber}: any, callback: an
 }
 
 async function sendMessageToTopic(parameters: any, callback: any): Promise<void> {
-    console.log(`sendMessageToTopic ${parameters} `)
-    const status = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload);
+    console.log(`sendMessageToTopic ${parameters} `)    
+    const status = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload,parameters.request.topic.channelId);
 
     callback(status, {});
 }
@@ -332,7 +334,7 @@ async function sendMessageToRskAddress({request}: any, callback: any): Promise<v
     console.log(`sendMessageToRskAddress ${JSON.stringify(request)}`)
     const {receiver: {address}, message: {payload}} = request;
     const topic = await dht.getPeerIdByRskAddress(address);
-    const status = await publishToRoom(topic, payload);
+    const status = await publishToRoom(topic, payload,address);
     callback(status, {});
 }
 
@@ -418,7 +420,6 @@ async function subscribeToRoom(roomName: string): Promise<any> {
         room.on('message', (message) => {
             console.log(`${roomName}: message\n`, formatMessage(message));
 
-
             let channels = [];
             for (let index = 0; index < message.topicIDs.length; index++) {
                 const topicId: string = message.topicIDs[index];
@@ -436,11 +437,12 @@ async function subscribeToRoom(roomName: string): Promise<any> {
             }
 
             console.log("roomName",roomName)
-            if (streamConnectionTopic.get(roomName) !== undefined) {
-                streamConnectionTopic.get(roomName).write({
+            if (streamConnectionTopic.get(roomName) !== undefined ) {
+                const payload = message.data as JsonObject
+                streamConnectionTopic.get(roomName)?.get(payload.to)?.write({
                     channelNewData: {
                         from: message.from,
-                        data: Buffer.from(JSON.stringify(message.data)),
+                        data: Buffer.from(JSON.stringify(payload.content)),
                         nonce: message.seqno,
                         channel: channels
                     }
@@ -468,7 +470,7 @@ async function subscribeToRoom(roomName: string): Promise<any> {
 
 }
 
-async function publishToRoom(roomName: string, message: string): Promise<any> {
+async function publishToRoom(roomName: string, message: string, to: string): Promise<any> {
 
     let status: any = null;
 
@@ -480,7 +482,8 @@ async function publishToRoom(roomName: string, message: string): Promise<any> {
     }
     else {
         const room = subscriptions.get(roomName);
-        await room?.broadcast(message);
+        //TODO ADD FROM
+        await room?.broadcast({ content: message, to});
     }
 
     return status;
