@@ -113,10 +113,8 @@ function subscribe(parameters: any, callback: any): void {
 */
 async function publish(parameters: any, callback: any): Promise<void> {
     //TODO if there's no active stream the server should warn the user
-    const sender = "111" //GET FROM metada
-
     console.log(`publishing ${parameters.request.message.payload} in topic ${parameters.request.topic.channelId} `)
-    const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload,parameters.request.topic.channelId,sender);
+    const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload,parameters.request.topic.channelId);
 
     callback(status, {});
 }
@@ -330,19 +328,17 @@ async function closeTopicWithRskAddress({request: subscriber}: any, callback: an
 }
 
 async function sendMessageToTopic(parameters: any, callback: any): Promise<void> {
-    console.log(`sendMessageToTopic ${parameters} `)
-    const senderAddress = "111"; //TODO IDENTIFY RSKADDRESS WITH METADATA
-    const status = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload,parameters.request.topic.channelId, senderAddress);
+    console.log(`sendMessageToTopic ${parameters} `)    
+    const status = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload,parameters.request.topic.channelId);
 
     callback(status, {});
 }
 
 async function sendMessageToRskAddress({request}: any, callback: any): Promise<void> {
     console.log(`sendMessageToRskAddress ${JSON.stringify(request)}`)
-    const senderAddress = "111"; //TODO IDENTIFY RSKADDRESS WITH METADATA
     const {receiver: {address}, message: {payload}} = request;
     const topic = await dht.getPeerIdByRskAddress(address);
-    const status = await publishToRoom(topic, payload,address,senderAddress);
+    const status = await publishToRoom(topic, payload,address);
     callback(status, {});
 }
 
@@ -484,7 +480,7 @@ async function subscribeToRoom(roomName: string): Promise<any> {
 
 }
 
-async function publishToRoom(roomName: string, message: string, to: string,from: string): Promise<any> {
+async function publishToRoom(roomName: string, message: string, to: string): Promise<any> {
 
     let status: any = null;
 
@@ -496,7 +492,8 @@ async function publishToRoom(roomName: string, message: string, to: string,from:
     }
     else {
         const room = subscriptions.get(roomName);
-        await room?.broadcast({ message: message, to: to, from: from});
+        //TODO ADD FROM
+        await room?.broadcast({ message: message, to: to});
     }
 
     return status;
