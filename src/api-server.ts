@@ -442,7 +442,7 @@ async function subscribeToRoom(roomName: string): Promise<any> {
                 streamConnectionTopic.get(roomName)?.get(payload.to)?.write({
                     channelNewData: {
                         from: message.from,
-                        data: Buffer.from(JSON.stringify(payload.message)),
+                        data: Buffer.from(JSON.stringify(payload.content)),
                         nonce: message.seqno,
                         channel: channels
                     }
@@ -483,7 +483,7 @@ async function publishToRoom(roomName: string, message: string, to: string): Pro
     else {
         const room = subscriptions.get(roomName);
         //TODO ADD FROM
-        await room?.broadcast({ message: message, to: to});
+        await room?.broadcast({ content: message, to});
     }
 
     return status;
