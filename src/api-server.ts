@@ -1,22 +1,17 @@
 /* eslint no-console: 0 */
-import config, { has } from 'config'
-import { Room, createLibP2P, Message, DirectChat, DirectMessage, JsonSerializable } from '@rsksmart/rif-communications-pubsub'
-import PeerId from 'peer-id'
+import config from 'config'
+import {DirectChat, DirectMessage, JsonSerializable, Message, Room} from '@rsksmart/rif-communications-pubsub'
 import chalk from 'chalk'
-import { inspect } from 'util'
+import {inspect} from 'util'
 import type Libp2p from 'libp2p'
 import libP2PFactory from './service/factory'
-import fs from 'fs'
-import cryptoS from 'libp2p-crypto'
-import { decryptPrivateKey, decryptDERPrivateKey } from './crypto'
-const encoder = new TextEncoder()
-const decoder = new TextDecoder()
-
-import { retry } from '@lifeomic/attempt';
-import {isValidPeerId} from "./peer-utils";
+import {retry} from '@lifeomic/attempt';
 import DhtService from "./service/dht";
 import EncodingService from "./service/encoding";
-import { JsonObject } from '@rsksmart/rif-communications-pubsub/types/definitions'
+import {JsonObject} from '@rsksmart/rif-communications-pubsub/types/definitions'
+
+const encoder = new TextEncoder()
+const decoder = new TextDecoder()
 
 
 var PROTO_PATH = __dirname + '/protos/api.proto';
@@ -34,12 +29,10 @@ var streamConnectionTopic = new Map();
 let directChat: DirectChat;
 
 
-
-let OK_STATUS =  {
+let OK_STATUS = {
     code: grpc.status.OK,
     message: ""
 }
-
 
 
 // Suggested options for similarity to existing grpc.load behavior
@@ -66,19 +59,18 @@ async function connectToCommunicationsNode(call: any) {
 
     try {
         await retry(async (context) => {
-        await dht.addRskAddressPeerId(call.request.address,libp2p.peerId._idB58String)
-    }, {
-        delay: 1200,
-        maxAttempts: 3,
-      });
+            await dht.addRskAddressPeerId(call.request.address, libp2p.peerId._idB58String)
+        }, {
+            delay: 1200,
+            maxAttempts: 3,
+        });
 
 
     } catch (err) {
         console.log(err)
     }
 
-    let notificationMsg = {
-    }
+    let notificationMsg = {}
 
     if (!streamConnection) {
         streamConnection = call;
@@ -87,8 +79,7 @@ async function connectToCommunicationsNode(call: any) {
             notification: Buffer.from('OK', 'utf8'),
             payload: Buffer.from('connection established', 'utf8')
         }
-    }
-    else {
+    } else {
         notificationMsg = {
             notification: Buffer.from('ERROR', 'utf8'),
             payload: Buffer.from('connection to server already exists', 'utf8')
@@ -100,9 +91,10 @@ async function connectToCommunicationsNode(call: any) {
 /*Implementation of protobuf service
     rpc Subscribe (Channel) returns (Response);
 */
+
 //TODO the function must write to the stream not to a console log
 function subscribe(parameters: any, callback: any): void {
-    console.log("subscribe",parameters.request.channelId)
+    console.log("subscribe", parameters.request.channelId)
     let status: any = subscribeToRoom(parameters.request.channelId);
 
     callback(status, {});
@@ -114,7 +106,11 @@ function subscribe(parameters: any, callback: any): void {
 async function publish(parameters: any, callback: any): Promise<void> {
     //TODO if there's no active stream the server should warn the user
     console.log(`publishing ${parameters.request.message.payload} in topic ${parameters.request.topic.channelId} `)
-    const status: any = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload,parameters.request.topic.channelId);
+    const {topic, message} = parameters.request;
+    const status: any = await publishToRoom(
+        topic.channelId,
+        {sender: libp2p.peerId.toB58String(), receiver: topic.channelId, content: message.payload}
+    );
 
     callback(status, {});
 }
@@ -123,7 +119,7 @@ async function sendMessage(parameters: any, callback: any): Promise<void> {
 
     console.log(`sending ${parameters.request.message.payload} to ${parameters.request.to} `)
 
-    await directChat.sendTo(parameters.request.to, { level: 'info', msg: parameters.request.message.payload });
+    await directChat.sendTo(parameters.request.to, {level: 'info', msg: parameters.request.message.payload});
     callback(null, {});
 }
 
@@ -138,8 +134,7 @@ function unsubscribe(parameters: any, callback: any): void {
         const room = subscriptions.get(parameters.request.channelId);
         room?.leave();
         subscriptions.delete(parameters.request.channelId);
-    }
-    else {
+    } else {
         status = {
             code: grpc.status.INVALID_ARGUMENT,
             message: `Peer was not subscribed to ${parameters.request.channelId}`
@@ -157,8 +152,7 @@ function endCommunication(parameters: any, callback: any): void {
 
     if (streamConnection) {
         streamConnection.end();
-    }
-    else {
+    } else {
         status = {
             code: grpc.status.UNKNOWN,
             message: 'There is no active connection to end'
@@ -175,9 +169,8 @@ function getSubscribers(parameters: any, callback: any): void {
     if (subscriptions.has(parameters.request.channelId)) {
         let room = subscriptions.get(parameters.request.channelId);
         const peers = room?.peers;
-        response = { peerId: peers };
-    }
-    else {
+        response = {peerId: peers};
+    } else {
         status = {
             code: grpc.status.INVALID_ARGUMENT,
             message: `Peer is not subscribed to ${parameters.request.channelId}`
@@ -197,15 +190,14 @@ function hasSubscriber(parameters: any, callback: any): void {
         if (subscriptions.has(parameters.request.channel.channelId)) {
             const room = subscriptions.get(parameters.request.channel.channelId);
             const hasPeer = libp2p.peerId._idB58String === parameters.request.channel.channelId
-                    || room?.hasPeer(parameters.request.peerId);
+                || room?.hasPeer(parameters.request.peerId);
 
-            response = { value: hasPeer };
-        }
-        else {
-            response = { value: false };
+            response = {value: hasPeer};
+        } else {
+            response = {value: false};
         }
     } catch (error) {
-        response = { value: false };
+        response = {value: false};
     }
 
 
@@ -216,25 +208,24 @@ async function IsSubscribedToRskAddress({request: subscriber}: any, callback: an
     console.log("IsSubscribedToRskAddress", subscriber)
     try {
         const peerId = await dht.getPeerIdByRskAddress(subscriber.address);
-        callback(null, { value: subscriptions.has(peerId) });
+        callback(null, {value: subscriptions.has(peerId)});
     } catch (error) {
-        callback(null, { value: false });
+        callback(null, {value: false});
     }
 }
 
 //////////////////////LUMINO SPECIFICS///////////////////////////
 
-async function locatePeerId (parameters: any, callback: any): Promise<void> {
+async function locatePeerId(parameters: any, callback: any): Promise<void> {
     let status: any = null;
     let response: any = {};
 
     try {
         console.log(`locatePeerID ${JSON.stringify(parameters.request.address)} `)
         const address = await dht.getPeerIdByRskAddress(parameters.request.address);
-        response = { address: address };
-    }
-    catch(e) {
-        status = { code: grpc.status.UNKNOWN, message: e.message }
+        response = {address: address};
+    } catch (e) {
+        status = {code: grpc.status.UNKNOWN, message: e.message}
     }
 
 
@@ -245,7 +236,7 @@ async function locatePeerId (parameters: any, callback: any): Promise<void> {
 async function createTopicWithPeerId(call: any) {
     console.log(`createTopicWithPeerId ${JSON.stringify(call.request)} `)
     await subscribeToRoom(call.request.address);
-    streamConnectionTopic.set(call.request.address,call);
+    streamConnectionTopic.set(call.request.address, call);
     const notificationMsg = {
         channelPeerJoined: {
             channel: {
@@ -258,7 +249,7 @@ async function createTopicWithPeerId(call: any) {
     call.write(notificationMsg);
 }
 
-async function createTopicWithRskAddress (call: any) {
+async function createTopicWithRskAddress(call: any) {
     let status: any = OK_STATUS;
     let response: any = {};
     const notificationMsg = {
@@ -277,17 +268,16 @@ async function createTopicWithRskAddress (call: any) {
         console.log("address", peerId)
         await subscribeToRoom(peerId);
         if (streamConnectionTopic.has(peerId)) {
-            streamConnectionTopic.get(peerId).set(rskAddress,call);
+            streamConnectionTopic.get(peerId).set(rskAddress, call);
         } else {
-            const rskAddresses = new Map([[rskAddress,call]])    
-            streamConnectionTopic.set(peerId,rskAddresses);    
+            const rskAddresses = new Map([[rskAddress, call]])
+            streamConnectionTopic.set(peerId, rskAddresses);
         }
         notificationMsg.channelPeerJoined.channel.channelId = peerId;
         notificationMsg.channelPeerJoined.peerId = peerId;
-        
+
         call.write(notificationMsg);
-    }
-    catch(e) {
+    } catch (e) {
         const subscribeErrorMsg = {
             subscribeError: {
                 channel: {
@@ -296,7 +286,7 @@ async function createTopicWithRskAddress (call: any) {
                 reason: e.message
             }
         }
-        console.log("ERROR",e.message)
+        console.log("ERROR", e.message)
         call.write(subscribeErrorMsg)
     }
 
@@ -319,31 +309,34 @@ async function closeTopicWithRskAddress({request: subscriber}: any, callback: an
             })
         }
     } catch (error) {
-        callback({ status: grpc.status.NOT_FOUND, message: error.message });
+        callback({status: grpc.status.NOT_FOUND, message: error.message});
     }
 }
 
 async function sendMessageToTopic(parameters: any, callback: any): Promise<void> {
-    console.log(`sendMessageToTopic ${parameters} `)    
-    const status = await publishToRoom(parameters.request.topic.channelId, parameters.request.message.payload,parameters.request.topic.channelId);
-
+    console.log(`sendMessageToTopic ${parameters} `)
+    const {topic, message} = parameters.request;
+    const status = await publishToRoom(topic.channelId,
+        {sender: libp2p.peerId.toB58String(), receiver: topic.channelId, content: message.payload}
+    )
     callback(status, {});
 }
 
 async function sendMessageToRskAddress({request}: any, callback: any): Promise<void> {
     console.log(`sendMessageToRskAddress ${JSON.stringify(request)}`)
-    const {receiver: {address}, message: {payload}} = request;
-    const topic = await dht.getPeerIdByRskAddress(address);
-    const status = await publishToRoom(topic, payload,address);
+    const {sender, receiver, message: { payload }} = request;
+    const room = await dht.getPeerIdByRskAddress(receiver.address);
+    const status = await publishToRoom(room, {sender: sender.address, receiver: receiver.address, content: payload});
     callback(status, {});
 }
 
 
-async function updateAddress (parameters: any, callback: any): Promise<void> {
+async function updateAddress(parameters: any, callback: any): Promise<void> {
     console.log(`updateAddress ${parameters} `)
 
     callback(null, {});
 }
+
 ///////////////////////////////////
 
 
@@ -372,123 +365,118 @@ async function subscribeToRoom(roomName: string): Promise<any> {
     let p = new Promise((resolve, reject) => {
         let status = OK_STATUS;
 
-    if (libp2p == null) {
-        status = { code: grpc.status.UNKNOWN, message: "Libp2p instance not configured" }
-        console.log('Libp2p instance not configured')
-        reject(status)
-    }
-    else if (subscriptions.has(roomName)) {
-        console.log(`Already subscribed to ${roomName}`)
-        resolve(`Already subscribed to ${roomName}`)
-    }
-    else {
-        const room = new Room(libp2p, roomName)
-        console.log(` - New subscription to ${roomName}`)
-        if (libp2p.peerId._idB58String == roomName) {
-            console.log("JOIN SELF")
-        }
-
-        room.on('peer:joined', (peer) => {
-            console.log(`${roomName}: ${chalk.green(`peer ${peer} joined`)}`);
-            sendStreamNotification({
-                channelPeerJoined: {
-                    channel: {
-                        channelId: roomName
-                    },
-                    peerId: peer
-                }
-            });
-            resolve(status);
-
-        });
-
-        room.on('peer:left', (peer) => {
-            console.log(`${roomName}: ${chalk.red(`peer ${peer} left`)}`);
-            sendStreamNotification({
-                channelPeerLeft: {
-                    channel: {
-                        channelId: roomName
-                    },
-                    peerId: peer
-                }
-            });
-            resolve(status);
-
-        });
-
-
-        room.on('message', (message) => {
-            console.log(`${roomName}: message\n`, formatMessage(message));
-
-            let channels = [];
-            for (let index = 0; index < message.topicIDs.length; index++) {
-                const topicId: string = message.topicIDs[index];
-                channels.push({ channelId: topicId });
+        if (libp2p == null) {
+            status = {code: grpc.status.UNKNOWN, message: "Libp2p instance not configured"}
+            console.log('Libp2p instance not configured')
+            reject(status)
+        } else if (subscriptions.has(roomName)) {
+            console.log(`Already subscribed to ${roomName}`)
+            resolve(`Already subscribed to ${roomName}`)
+        } else {
+            const room = new Room(libp2p, roomName)
+            console.log(` - New subscription to ${roomName}`)
+            if (libp2p.peerId._idB58String == roomName) {
+                console.log("JOIN SELF")
             }
 
-            if (message.signature != null) {
-                if (message.key != null) {
-                    //Public key for verification
-                    //TODO Verify a published message before sending it might be a good practice
-                    //This signature is communication-implementation dependent, it's not an application-based
-                    //authentication (i.e, it's using the node's peerID to sign the protobuf message sent by the protocol)
+            room.on('peer:joined', (peer) => {
+                console.log(`${roomName}: ${chalk.green(`peer ${peer} joined`)}`);
+                sendStreamNotification({
+                    channelPeerJoined: {
+                        channel: {
+                            channelId: roomName
+                        },
+                        peerId: peer
+                    }
+                });
+                resolve(status);
 
+            });
+
+            room.on('peer:left', (peer) => {
+                console.log(`${roomName}: ${chalk.red(`peer ${peer} left`)}`);
+                sendStreamNotification({
+                    channelPeerLeft: {
+                        channel: {
+                            channelId: roomName
+                        },
+                        peerId: peer
+                    }
+                });
+                resolve(status);
+
+            });
+
+
+            room.on('message', (message) => {
+                console.log(`${roomName}: message\n`, formatMessage(message));
+
+                let channels = [];
+                for (let index = 0; index < message.topicIDs.length; index++) {
+                    const topicId: string = message.topicIDs[index];
+                    channels.push({channelId: topicId});
                 }
-            }
 
-            console.log("roomName",roomName)
-            if (streamConnectionTopic.get(roomName) !== undefined ) {
+                if (message.signature != null) {
+                    if (message.key != null) {
+                        //Public key for verification
+                        //TODO Verify a published message before sending it might be a good practice
+                        //This signature is communication-implementation dependent, it's not an application-based
+                        //authentication (i.e, it's using the node's peerID to sign the protobuf message sent by the protocol)
+
+                    }
+                }
+
+                console.log("roomName", roomName)
                 const payload = message.data as JsonObject
-                streamConnectionTopic.get(roomName)?.get(payload.to)?.write({
+
+                streamConnectionTopic.get(roomName)?.get(payload.receiver)?.write({
                     channelNewData: {
-                        from: message.from,
+                        peer: {address: message.from},
+                        sender: {address: payload.sender},
                         data: Buffer.from(JSON.stringify(payload.content)),
                         nonce: message.seqno,
                         channel: channels
                     }
                 });
-            }
 
 
-            sendStreamNotification({
-                channelNewData: {
-                    from: message.from,
-                    data: Buffer.from(JSON.stringify(message.data)),
+                sendStreamNotification({
+                    peer: {address: message.from},
+                    sender: {address: payload.sender},
+                    data: Buffer.from(JSON.stringify(payload.content)),
                     nonce: message.seqno,
                     channel: channels
-                }
+                });
+                resolve(status);
             });
-            resolve(status);
-        });
 
-        subscriptions.set(roomName, room);
-        resolve(status);
-    }
-      });
-      return p;
+            subscriptions.set(roomName, room);
+            resolve(status);
+        }
+    });
+    return p;
 
 
 }
 
-async function publishToRoom(roomName: string, message: string, to: string): Promise<any> {
+async function publishToRoom(roomName: string,
+                             message: { sender: any, receiver: any, content: any }): Promise<any> {
 
     let status: any = null;
 
     if (libp2p == null) {
-        status = { code: grpc.status.UNKNOWN, message: "Libp2p instance not configured" }
-    }
-    else if (!subscriptions.has(roomName)) {
-        status = { code: grpc.status.INVALID_ARGUMENT, message: `Not subscribed to ${roomName}` }
-    }
-    else {
+        status = {code: grpc.status.UNKNOWN, message: "Libp2p instance not configured"}
+    } else if (!subscriptions.has(roomName)) {
+        status = {code: grpc.status.INVALID_ARGUMENT, message: `Not subscribed to ${roomName}`}
+    } else {
         const room = subscriptions.get(roomName);
         //TODO ADD FROM
-        await room?.broadcast({ content: message, to});
+        await room?.broadcast(message);
     }
 
     return status;
 }
-
 
 
 const main = async () => {
@@ -535,11 +523,11 @@ const main = async () => {
             signature: null
         });
     })
-    directChat.on('error', (error: Error) => { })
+    directChat.on('error', (error: Error) => {
+    })
     console.log('\n')
     console.log("PEERID:", libp2p.peerId._idB58String)
 }
-
 
 
 /**
@@ -588,7 +576,6 @@ if (require.main === module) {
     console.log(`GRPC Server started on port ${grpcPort}`)
 
 }
-
 
 
 exports.getServer = getServer;
