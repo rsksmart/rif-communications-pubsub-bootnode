@@ -469,7 +469,7 @@ async function publishToRoom(roomName: string,
         status = {code: grpc.status.UNKNOWN, message: "Libp2p instance not configured"}
     } else {
         const room = new Room(libp2p, roomName)
-        await room?.broadcast({ content: message});
+        await room?.broadcast(message);
     }
 
     return status;
