@@ -469,11 +469,8 @@ async function publishToRoom(roomName: string,
 
     if (libp2p == null) {
         status = {code: grpc.status.UNKNOWN, message: "Libp2p instance not configured"}
-    } else if (!subscriptions.has(roomName)) {
-        status = {code: grpc.status.INVALID_ARGUMENT, message: `Not subscribed to ${roomName}`}
     } else {
-        const room = subscriptions.get(roomName);
-        //TODO ADD FROM
+        const room = new Room(libp2p, roomName)
         await room?.broadcast(message);
     }
 
