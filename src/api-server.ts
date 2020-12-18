@@ -25,7 +25,7 @@ let dht: DhtService;
 //State of the connection with the user of the GRPC API
 const subscriptions = new Map<string, Room>();
 var streamConnection: any;
-var streamConnectionTopic = new Map();
+const streamConnectionTopic = new Map<string, Map<string, any>>();
 let directChat: DirectChat;
 
 
@@ -250,16 +250,6 @@ async function createTopicWithPeerId(call: any) {
 }
 
 async function createTopicWithRskAddress(call: any) {
-    let status: any = OK_STATUS;
-    let response: any = {};
-    const notificationMsg = {
-        channelPeerJoined: {
-            channel: {
-                channelId: ""
-            },
-            peerId: ""
-        }
-    }
     console.log(`createTopicWithRskAddress ${JSON.stringify(call.request)} `)
     try {
         const rskAddress = call.request.address;
@@ -268,15 +258,19 @@ async function createTopicWithRskAddress(call: any) {
         console.log("address", peerId)
         await subscribeToRoom(peerId);
         if (streamConnectionTopic.has(peerId)) {
-            streamConnectionTopic.get(peerId).set(rskAddress, call);
+            streamConnectionTopic.get(peerId)?.set(rskAddress, call);
         } else {
             const rskAddresses = new Map([[rskAddress, call]])
             streamConnectionTopic.set(peerId, rskAddresses);
         }
-        notificationMsg.channelPeerJoined.channel.channelId = peerId;
-        notificationMsg.channelPeerJoined.peerId = peerId;
-
-        call.write(notificationMsg);
+        call.write({
+            channelPeerJoined: {
+                channel: {
+                    channelId: peerId
+                },
+                peerId
+            }
+        });
     } catch (e) {
         const subscribeErrorMsg = {
             subscribeError: {
@@ -298,9 +292,7 @@ async function closeTopicWithRskAddress({request: subscriber}: any, callback: an
     try {
         const peerId = await dht.getPeerIdByRskAddress(subscriber.address);
         if (subscriptions.has(peerId)) {
-            const room = subscriptions.get(peerId);
-            room?.leave();
-            subscriptions.delete(peerId)
+            unsubscribeWithRskAddress(peerId, subscriber.address)
             callback();
         } else {
             callback({
@@ -310,6 +302,16 @@ async function closeTopicWithRskAddress({request: subscriber}: any, callback: an
         }
     } catch (error) {
         callback({status: grpc.status.NOT_FOUND, message: error.message});
+    }
+}
+
+function unsubscribeWithRskAddress(peerId: string, address: string) {
+    streamConnectionTopic.get(peerId)?.delete(address);
+    if (!streamConnectionTopic.get(peerId)?.size) {
+        streamConnectionTopic.delete(peerId);
+        const room = subscriptions.get(peerId);
+        room?.leave();
+        subscriptions.delete(peerId)
     }
 }
 
@@ -428,13 +430,13 @@ async function subscribeToRoom(roomName: string): Promise<any> {
                 }
 
                 console.log("roomName", roomName)
-                const payload = message.data as JsonObject
+                const { content, sender, receiver} = message.data as JsonObject
 
-                streamConnectionTopic.get(roomName)?.get(payload.receiver)?.write({
+                streamConnectionTopic.get(roomName)?.get(receiver as string)?.write({
                     channelNewData: {
                         peer: {address: message.from},
-                        sender: {address: payload.sender},
-                        data: Buffer.from(JSON.stringify(payload.content)),
+                        sender: {address: sender},
+                        data: Buffer.from(JSON.stringify(content)),
                         nonce: message.seqno,
                         channel: channels
                     }
@@ -443,8 +445,8 @@ async function subscribeToRoom(roomName: string): Promise<any> {
 
                 sendStreamNotification({
                     peer: {address: message.from},
-                    sender: {address: payload.sender},
-                    data: Buffer.from(JSON.stringify(payload.content)),
+                    sender: {address: sender},
+                    data: Buffer.from(JSON.stringify(content)),
                     nonce: message.seqno,
                     channel: channels
                 });
