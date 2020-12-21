@@ -1,3 +1,8 @@
+<a name="0.1.0-dev.3"></a>
+# [0.1.0-dev.3](https://github.com/rsksmart/rif-communications-pubsub-bootnode/compare/v0.1.0-dev.2...v0.1.0-dev.3) (2020-12-21)
+
+
+
 <a name="0.1.0-dev.2"></a>
 # [0.1.0-dev.2](https://github.com/rsksmart/rif-communications-pubsub-bootnode/compare/v0.1.0-dev.1...v0.1.0-dev.2) (2020-11-18)
 
