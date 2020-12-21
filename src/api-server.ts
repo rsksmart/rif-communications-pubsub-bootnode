@@ -17,7 +17,6 @@ var grpc = require('grpc');
 var protoLoader = require('@grpc/proto-loader');
 var parseArgs = require('minimist');
 
-
 // Suggested options for similarity to existing grpc.load behavior
 var packageDefinition = protoLoader.loadSync(
     PROTO_PATH,
@@ -128,6 +127,5 @@ async function main() {
 if (require.main === module) {
     main();
 }
-
 
 exports.getServer = getServer;
