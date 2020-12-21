@@ -40,7 +40,7 @@
     "tasegir:link": "ln -s ./node_modules/tasegir/src/config/tsconfig.json ./tsconfig.json && ln -s ./node_modules/tasegir/src/config/eslintrc.js ./.eslintrc.js"
   },
   "dependencies": {
-    "@rsksmart/rif-communications-pubsub": "0.1.0-dev.10",
+    "@rsksmart/rif-communications-pubsub": "0.1.0-dev.11",
     "chalk": "^4.1.0",
     "config": "^3.3.2",
     "peer-id": "^0.14.2"
