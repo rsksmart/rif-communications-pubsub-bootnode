@@ -1,0 +1,24 @@
+{
+  libp2p: {
+    addresses: {
+      listen: [
+        "/ip4/127.0.0.1/tcp/6020",
+        "/ip4/127.0.0.1/tcp/6021/ws"
+      ]
+    }
+  },
+  loadPrivKeyFromFile: true,
+  key : {
+    createNew: false,
+    password:"1234",
+    openSSL:true,
+    privateKeyURLPath:"file:////home/infuy/Proyectos/rsk/rif-comms/rif-communications-pubsub-bootnode/config/keys/node1/ec_key_pkcs8_v2.der",
+    type: "DER"
+  },
+  rooms: ["0xtestroom", "0xtestroom6", "0xtestroom3"],
+  grpcPort: 6013,
+  displayPeerId: true,
+  generatePeerWithSecp256k1Keys: true,
+}
+
+

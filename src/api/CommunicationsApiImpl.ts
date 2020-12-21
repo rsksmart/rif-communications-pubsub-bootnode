@@ -5,7 +5,7 @@ import DhtService from "../service/DHTService";
 import grpc from 'grpc';
 import EncodingService from "../service/EncodingService";
 import CommunicationsApi from "./CommunicationsApi";
-import TopicService from "../service/TopicService";
+import PeerService from "../service/PeerService";
 
 class CommunicationsApiImpl implements CommunicationsApi {
 
@@ -13,7 +13,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
             private peerId: any,
             private encoding: EncodingService,
             private dht: DhtService,
-            private topics: TopicService,
+            private peerService: PeerService,
             private directChat: DirectChat) {
         this.directChat.on('message', (directMsg: DirectMessage) => {
 
@@ -31,21 +31,29 @@ class CommunicationsApiImpl implements CommunicationsApi {
 
     private stream: any;
 
-    async IsSubscribedToRskAddress({request: subscriber}: any, callback: any): Promise<void> {
-        console.log("IsSubscribedToRskAddress", subscriber)
+    async IsSubscribedToRskAddress({request: rskAddressTopic}: any, callback: any): Promise<void> {
+        console.log("IsSubscribedToRskAddress", rskAddressTopic)
         try {
-            const peerId = await this.dht.getPeerIdByRskAddress(subscriber.address);
-            callback(null, {value: this.topics.isSubscribed(peerId)});
+            const peerId = await this.dht.getPeerIdByRskAddress(rskAddressTopic.address);
+            callback(null, {
+                value: this.peerService.get(peerId)?.getTopic(rskAddressTopic.address)?.hasSubscribers()
+            });
         } catch (error) {
             callback(null, {value: false});
         }
     }
 
-    async closeTopicWithRskAddress({request: subscriber}: any, callback: any): Promise<void> {
-        console.log(`closeTopic ${JSON.stringify(subscriber)} `)
+    async closeTopicWithRskAddress({request: subscription}: any, callback: any): Promise<void> {
+        console.log(`closeTopic ${JSON.stringify(subscription)} `)
         try {
-            const peerId = await this.dht.getPeerIdByRskAddress(subscriber.address);
-            this.topics.unsubscribe(peerId);
+            const {subscriber} = subscription;
+            const peerId = await this.dht.getPeerIdByRskAddress(subscription.topic.address);
+            const peer = this.peerService.get(peerId);
+            const topic = peer?.getTopic(subscription.topic.address);
+            topic?.unsubscribe(subscriber.address);
+            if (!topic?.hasSubscribers()) {
+                peer?.deleteTopic(subscription.topic.address);
+            }
             callback();
         } catch (error) {
             callback({status: grpc.status.NOT_FOUND, message: error.message});
@@ -54,16 +62,19 @@ class CommunicationsApiImpl implements CommunicationsApi {
 
     async sendMessageToTopic(parameters: any, callback: any): Promise<void> {
         console.log(`sendMessageToTopic ${parameters} `)
-        const status = await this.topics.publish(parameters.request.topic.channelId, parameters.request.message.payload);
+        const peer = this.peerService.create(parameters.request.topic.channelId);
+
+        peer.publish({ content: parameters.request.message.payload});
         callback(status, {});
     }
 
     async sendMessageToRskAddress({request}: any, callback: any): Promise<void> {
         console.log(`sendMessageToRskAddress ${JSON.stringify(request)}`)
-        const {receiver: {address}, message: {payload}} = request;
-        const topic = await this.dht.getPeerIdByRskAddress(address);
-        const status = await this.topics.publish(topic, payload);
-        callback(status, {});
+        const {receiver: {address: receiverAddress}, sender: {address: senderAddress}, message: {payload}} = request;
+        const peerId = await this.dht.getPeerIdByRskAddress(receiverAddress);
+        const peer = this.peerService.create(peerId);
+        peer.publish({ content: payload, receiver: receiverAddress, sender: senderAddress});
+        callback(null, {});
     }
 
 
@@ -91,39 +102,47 @@ class CommunicationsApiImpl implements CommunicationsApi {
     }
 
     async createTopicWithPeerId(call: any) {
-        console.log(`createTopicWithPeerId ${JSON.stringify(call.request)} `);
-        await this.topics.subscribe(call.request.address, call);
-    }
-
-    async createTopicWithRskAddress(call: any) {
-        let response: any = {};
-        const notificationMsg = {
-            channelPeerJoined: {
-                channel: {
-                    channelId: ""
-                },
-                peerId: ""
-            }
-        }
-        console.log(`createTopicWithRskAddress ${JSON.stringify(call.request)} `)
         try {
-            console.log(`locatePeerID ${JSON.stringify(call.request.address)} `)
-            const address = await this.dht.getPeerIdByRskAddress(call.request.address);
-            console.log("address", address)
-            await this.topics.subscribe(address, call);
-            notificationMsg.channelPeerJoined.channel.channelId = address;
-            notificationMsg.channelPeerJoined.peerId = address;
+            console.log(`createTopicWithPeerId ${JSON.stringify(call.request)} `);
+            const peer = this.peerService.create(call.request.topic.address);
+            const topic = peer.createTopic(call.request.topic.address);
+            topic?.subscribe(call.request.subscriber.address, call)
         } catch (e) {
-            const subscribeErrorMsg = {
+            call.write({
                 subscribeError: {
                     channel: {
                         channelId: ""
                     },
                     reason: e.message
                 }
-            }
-            console.log("ERROR", e.message)
-            call.write(subscribeErrorMsg)
+            });
+        }
+    }
+
+    async createTopicWithRskAddress(call: any) {
+        console.log(`createTopicWithRskAddress ${JSON.stringify(call.request)} `)
+        try {
+            const peerId = await this.dht.getPeerIdByRskAddress(call.request.topic.address);
+            const peer = this.peerService.create(peerId);
+            const topic = peer.createTopic(call.request.topic.address);
+            topic?.subscribe(call.request.subscriber.address, call)
+            call.write({
+                channelPeerJoined: {
+                    channel: {
+                        channelId: peerId
+                    },
+                    peerId: peerId
+                }
+            });
+        } catch (e) {
+            call.write({
+                subscribeError: {
+                    channel: {
+                        channelId: ""
+                    },
+                    reason: e.message
+                }
+            })
         }
     }
 
@@ -140,8 +159,6 @@ class CommunicationsApiImpl implements CommunicationsApi {
                 delay: 1200,
                 maxAttempts: 3,
             });
-
-
         } catch (err) {
             console.log(err)
         }
@@ -178,17 +195,10 @@ class CommunicationsApiImpl implements CommunicationsApi {
     */
     async publish(parameters: any, callback: any) {
         //TODO if there's no active stream the server should warn the user
-
         console.log(`publishing ${parameters.request.message.payload} in topic ${parameters.request.topic.channelId} `)
-        try {
-            this.topics.publish(parameters.request.topic.channelId, parameters.request.message.payload);
-            callback();
-        } catch (e) {
-            callback({
-                code: grpc.status.INVALID_ARGUMENT,
-                message: `Not subscribed to ${parameters.request.topic.channelId}`
-            })
-        }
+        const peer = this.peerService.create(parameters.request.topic.channelId);
+        peer.publish({ content: parameters.request.message.payload});
+        callback();
     }
 
     async sendMessage(parameters: any, callback: any): Promise<void> {
@@ -203,7 +213,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
         rpc Unsubscribe (Channel) returns (Response);
     */
     unsubscribe(parameters: any, callback: any): void {
-        this.topics.unsubscribe(parameters.request.channelId)
+        this.peerService.get(parameters.request.channelId)?.deleteTopic(parameters.request.channelId);
         callback(null, {});
     }
 
@@ -223,9 +233,9 @@ class CommunicationsApiImpl implements CommunicationsApi {
     getSubscribers(parameters: any, callback: any): void {
         let status: any = null;
         let response: any = {};
-
-        if (this.topics.isSubscribed(parameters.request.channelId)) {
-            const peers = this.topics.getSubscribers(parameters.request.channelId);
+        const peer = this.peerService.get(parameters.request.channelId);
+        if (peer) {
+            const peers = peer.getPeers();
             response = {peerId: peers};
         } else {
             status = {
@@ -243,7 +253,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
         console.log("hasSubscriber", parameters)
         try {
             const {channelId, peerId} = parameters.request.channel;
-            response = {value: this.topics.isSubscribedTo(channelId, peerId)};
+            response = {value: this.peerService.get(channelId)?.getPeers()?.length};
         } catch (error) {
             response = {value: false};
         }

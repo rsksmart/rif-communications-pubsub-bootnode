@@ -1,25 +1,15 @@
 /* eslint no-console: 0 */
-import config, {has} from 'config'
-import {Room, createLibP2P, Message, DirectChat, DirectMessage} from '@rsksmart/rif-communications-pubsub'
-import PeerId from 'peer-id'
-import chalk from 'chalk'
-import {inspect} from 'util'
-import type Libp2p from 'libp2p'
+import config from 'config'
+import {DirectChat} from '@rsksmart/rif-communications-pubsub'
 import libP2PFactory from './service/LibP2PFactory'
-import fs from 'fs'
-import cryptoS from 'libp2p-crypto'
-import {decryptPrivateKey, decryptDERPrivateKey} from './crypto'
-
-const encoder = new TextEncoder()
-const decoder = new TextDecoder()
-
-import {retry} from '@lifeomic/attempt';
-import {isValidPeerId} from "./peer-utils";
 import DhtService from "./service/DHTService";
 import EncodingService from "./service/EncodingService";
 import CommunicationsApiImpl from "./api/CommunicationsApiImpl";
 import CommunicationsApi from "./api/CommunicationsApi";
-import TopicService from "./service/TopicService";
+import PeerService from "./service/PeerService";
+
+const encoder = new TextEncoder()
+const decoder = new TextDecoder()
 
 
 var PROTO_PATH = __dirname + '/protos/api.proto';
@@ -47,7 +37,7 @@ async function getApi(): Promise<CommunicationsApi> {
     const libp2p = await libP2PFactory.fromConfig(config);
     const encoding = new EncodingService(encoder, decoder)
     const dht = new DhtService(libp2p.contentRouting, encoding);
-    const topicService = new TopicService(libp2p);
+    const peerService = new PeerService(libp2p);
     const rooms = config.get('rooms') as Array<string>
     const directChat = DirectChat.getDirectChat(libp2p);
 
@@ -55,7 +45,7 @@ async function getApi(): Promise<CommunicationsApi> {
         libp2p.peerId,
         encoding,
         dht,
-        topicService,
+        peerService,
         directChat);
     console.log('Node started, listening on addresses:')
 
@@ -81,7 +71,8 @@ async function getApi(): Promise<CommunicationsApi> {
     console.log('\nListening on topics: ')
 
     rooms.forEach((roomName: string) => {
-        topicService.subscribe(roomName);
+        const peer = peerService.create(roomName);
+        const topic = peer.createTopic(roomName);
     })
 
     console.log('\n')
