@@ -1,5 +1,5 @@
 export default interface CommunicationsApi {
-    connectToCommunicationsNode: (call: any) => Promise<void>;
+    connectToCommunicationsNode: (parameters: any, callback: any) => Promise<void>;
     endCommunication: (parameters: any, callback: any) => void;
     subscribe: (parameters: any, callback: any) => void;
     unsubscribe: (parameters: any, callback: any) => void;

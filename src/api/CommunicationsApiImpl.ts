@@ -14,22 +14,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
             private encoding: EncodingService,
             private dht: DhtService,
             private peerService: PeerService,
-            private directChat: DirectChat) {
-        this.directChat.on('message', (directMsg: DirectMessage) => {
-
-            console.log(directMsg);
-
-            this.stream({
-                message: directMsg,
-                peerId: directMsg.from,
-                signature: null
-            });
-        });
-        this.directChat.on('error', (error: Error) => {
-        });
-    }
-
-    private stream: any;
+            private directChat: DirectChat) {}
 
     async IsSubscribedToRskAddress({request: rskAddressTopic}: any, callback: any): Promise<void> {
         console.log("IsSubscribedToRskAddress", rskAddressTopic)
@@ -154,40 +139,27 @@ class CommunicationsApiImpl implements CommunicationsApi {
     /*Implementation of protobuf service
         rpc ConnectToCommunicationsNode(NoParams) returns (stream Notification);
     */
-    async connectToCommunicationsNode(call: any) {
-        console.log("connectToCommunicationsNode", JSON.stringify(call.request))
+    async connectToCommunicationsNode(parameters: any, callback: any) {
+        console.log("connectToCommunicationsNode", JSON.stringify(parameters.request))
 
         try {
             await retry(async (context) => {
-                await this.dht.addRskAddressPeerId(call.request.address, this.peerId._idB58String)
+                await this.dht.addRskAddressPeerId(parameters.request.address, this.peerId._idB58String)
             }, {
                 delay: 1200,
                 maxAttempts: 3,
             });
-        } catch (err) {
-            call.write({connectCommsError: {
-                reason: err.message
-            }});
-            
-            return
-        }
-
-        let notificationMsg = {}
-
-        if (!this.stream) {
-            this.stream = call;
-
-            notificationMsg = {
+            callback(null, {
                 notification: Buffer.from('OK', 'utf8'),
                 payload: Buffer.from('connection established', 'utf8')
-            }
-        } else {
-            notificationMsg = {
+            });
+        } catch (err) {
+            console.log(err)
+            callback({
                 notification: Buffer.from('ERROR', 'utf8'),
-                payload: Buffer.from('connection to server already exists', 'utf8')
-            }
+                payload: Buffer.from(err.message, 'utf8')
+            });
         }
-        call.write(notificationMsg);
     }
 
     /*Implementation of protobuf service
@@ -227,18 +199,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
     }
 
 
-    endCommunication(parameters: any, callback: any): void {
-        if (this.stream) {
-            this.stream.end();
-            callback(null, {});
-        } else {
-            callback({
-                endCommsError: {
-                    reason: 'There is no active connection to end'
-                }
-            });
-        }
-    }
+    endCommunication(parameters: any, callback: any): void {}
 
     getSubscribers(parameters: any, callback: any): void {
         let status: any = null;
