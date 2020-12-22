@@ -130,6 +130,9 @@ message Notification {
         ChannelPeerJoined channelPeerJoined = 6;
         ServerNotification serverNotification = 7;
         SubscribeError subscribeError = 8;
+        ConnectCommsError connectCommsError = 9;
+        EndCommsError endCommsError = 10;
+        
     }
 }
 
@@ -195,8 +198,18 @@ message ServerNotification {
 }
 
 
-//A subscribe has failled
+//A subscribe has failed
 message SubscribeError {
     Channel channel = 1;
     string reason = 2;
+}
+
+//Comms could not be terminated
+message EndCommsError {
+    string reason = 1;
+}
+
+//Comms could not be initialized
+message ConnectCommsError {
+    string reason = 1;
 }

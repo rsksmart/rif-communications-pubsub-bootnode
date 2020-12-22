@@ -41,7 +41,12 @@ class CommunicationsApiImpl implements CommunicationsApi {
             }
             callback();
         } catch (error) {
-            callback({status: grpc.status.NOT_FOUND, message: error.message});
+            callback({subscribeError: {
+                channel: {
+                    channelId: ""
+                },
+                reason: error.message
+            }});
         }
     }
 
@@ -194,9 +199,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
     }
 
 
-    endCommunication(parameters: any, callback: any): void {
-        //TODO: Should we remove this?
-    }
+    endCommunication(parameters: any, callback: any): void {}
 
     getSubscribers(parameters: any, callback: any): void {
         let status: any = null;
