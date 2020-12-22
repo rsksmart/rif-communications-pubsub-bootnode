@@ -7,7 +7,7 @@ service CommunicationsApi {
     //The client can be notified of events in their subscriptions
 
     //Open a data stream with the server, it can only receive messages
-    rpc ConnectToCommunicationsNode(RskAddress) returns (stream Notification);
+    rpc ConnectToCommunicationsNode(RskAddress) returns (Notification);
 
     //Close the data stream
     rpc EndCommunication(Void) returns (Void);

@@ -5,16 +5,11 @@ class DHTService {
     constructor(private contentRouting: any,
                 private encoding: EncodingService) {}
 
-    async addRskAddressPeerId(address: string, peerId: string): Promise<Boolean> {
+    async addRskAddressPeerId(address: string, peerId: string): Promise<void> {
         console.log("Adding RSKADDRESS PEER=",peerId, " : RSKADDRESS=",address);
         const encodedAddress = Buffer.from(this.encoding.encode(address));
         const encodedPeerId = Buffer.from(this.encoding.encode(peerId));
-        try {
-            await this.contentRouting.put(encodedAddress, encodedPeerId);
-            return true;
-        } catch (error) {
-            return false;
-        }
+        await this.contentRouting.put(encodedAddress, encodedPeerId);
     }
 
     async getPeerIdByRskAddress(address: string): Promise<string> {
