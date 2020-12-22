@@ -56,7 +56,12 @@ class CommunicationsApiImpl implements CommunicationsApi {
             }
             callback();
         } catch (error) {
-            callback({status: grpc.status.NOT_FOUND, message: error.message});
+            callback({subscribeError: {
+                channel: {
+                    channelId: ""
+                },
+                reason: error.message
+            }});
         }
     }
 
@@ -160,7 +165,11 @@ class CommunicationsApiImpl implements CommunicationsApi {
                 maxAttempts: 3,
             });
         } catch (err) {
-            console.log(err)
+            call.write({connectCommsError: {
+                reason: err.message
+            }});
+            
+            return
         }
 
         let notificationMsg = {}
@@ -224,8 +233,9 @@ class CommunicationsApiImpl implements CommunicationsApi {
             callback(null, {});
         } else {
             callback({
-                code: grpc.status.UNKNOWN,
-                message: 'There is no active connection to end'
+                endCommsError: {
+                    reason: 'There is no active connection to end'
+                }
             });
         }
     }
