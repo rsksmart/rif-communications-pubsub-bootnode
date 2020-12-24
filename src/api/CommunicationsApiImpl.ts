@@ -46,7 +46,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
                     channelId: ""
                 },
                 reason: error.message
-            }});
+            }},null);
         }
     }
 
@@ -155,10 +155,9 @@ class CommunicationsApiImpl implements CommunicationsApi {
             });
         } catch (err) {
             console.log(err)
-            callback({
-                notification: Buffer.from('ERROR', 'utf8'),
-                payload: Buffer.from(err.message, 'utf8')
-            });
+            callback({connectCommsError: {
+                reason: err.message
+            }},null);
         }
     }
 
