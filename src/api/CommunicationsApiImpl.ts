@@ -35,18 +35,16 @@ class CommunicationsApiImpl implements CommunicationsApi {
             const peerId = await this.dht.getPeerIdByRskAddress(subscription.topic.address);
             const peer = this.peerService.get(peerId);
             const topic = peer?.getTopic(subscription.topic.address);
+            if (!topic) {
+                throw new Error("Topic not found");
+            }
             topic?.unsubscribe(subscriber.address);
             if (!topic?.hasSubscribers()) {
                 peer?.deleteTopic(subscription.topic.address);
             }
             callback();
         } catch (error) {
-            callback({subscribeError: {
-                channel: {
-                    channelId: ""
-                },
-                reason: error.message
-            }});
+            callback({code: grpc.status.NOT_FOUND, message: `Peer was not subscribed to ${subscription.topic.address}`});
         }
     }
 
