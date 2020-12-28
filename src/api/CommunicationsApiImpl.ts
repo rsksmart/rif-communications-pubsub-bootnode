@@ -6,6 +6,7 @@ import grpc from 'grpc';
 import EncodingService from "../service/EncodingService";
 import CommunicationsApi from "./CommunicationsApi";
 import PeerService from "../service/PeerService";
+import RskSubscription from "../dto/RskSubscription";
 
 class CommunicationsApiImpl implements CommunicationsApi {
 
@@ -16,12 +17,14 @@ class CommunicationsApiImpl implements CommunicationsApi {
             private peerService: PeerService,
             private directChat: DirectChat) {}
 
-    async IsSubscribedToRskAddress({request: rskAddressTopic}: any, callback: any): Promise<void> {
-        console.log("IsSubscribedToRskAddress", rskAddressTopic)
+    async IsSubscribedToRskAddress({request: subscription}: { request: RskSubscription }, callback: any): Promise<void> {
+        console.log("IsSubscribedToRskAddress", subscription)
         try {
-            const peerId = await this.dht.getPeerIdByRskAddress(rskAddressTopic.address);
+            const peerId = await this.dht.getPeerIdByRskAddress(subscription.topic.address);
             callback(null, {
-                value: this.peerService.get(peerId)?.getTopic(rskAddressTopic.address)?.hasSubscribers()
+                value: this.peerService.get(peerId)
+                    ?.getTopic(subscription.topic.address)
+                    ?.hasSubscriber(subscription.subscriber.address)
             });
         } catch (error) {
             callback(null, {value: false});
