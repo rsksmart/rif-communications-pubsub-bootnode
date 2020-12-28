@@ -10,11 +10,12 @@ import PeerService from "../service/PeerService";
 class CommunicationsApiImpl implements CommunicationsApi {
 
     constructor(
-            private peerId: any,
-            private encoding: EncodingService,
-            private dht: DhtService,
-            private peerService: PeerService,
-            private directChat: DirectChat) {}
+        private peerId: any,
+        private encoding: EncodingService,
+        private dht: DhtService,
+        private peerService: PeerService,
+        private directChat: DirectChat) {
+    }
 
     async IsSubscribedToRskAddress({request: rskAddressTopic}: any, callback: any): Promise<void> {
         console.log("IsSubscribedToRskAddress", rskAddressTopic)
@@ -41,12 +42,14 @@ class CommunicationsApiImpl implements CommunicationsApi {
             }
             callback();
         } catch (error) {
-            callback({subscribeError: {
-                channel: {
-                    channelId: ""
-                },
-                reason: error.message
-            }},null);
+            callback({
+                subscribeError: {
+                    channel: {
+                        channelId: ""
+                    },
+                    reason: error.message
+                }
+            }, null);
         }
     }
 
@@ -54,17 +57,26 @@ class CommunicationsApiImpl implements CommunicationsApi {
         console.log(`sendMessageToTopic ${parameters} `)
         const peer = this.peerService.create(parameters.request.topic.channelId);
 
-        peer.publish({ content: parameters.request.message.payload});
+        peer.publish({content: parameters.request.message.payload});
         callback(status, {});
     }
 
     async sendMessageToRskAddress({request}: any, callback: any): Promise<void> {
         console.log(`sendMessageToRskAddress ${JSON.stringify(request)}`)
-        const {receiver: {address: receiverAddress}, sender: {address: senderAddress}, message: {payload}} = request;
-        const peerId = await this.dht.getPeerIdByRskAddress(receiverAddress);
-        const peer = this.peerService.create(peerId);
-        peer.publish({ content: payload, receiver: receiverAddress, sender: senderAddress});
-        callback(null, {});
+        try {
+            const {
+                receiver: {address: receiverAddress},
+                sender: {address: senderAddress},
+                message: {payload}
+            } = request;
+            const peerId = await this.dht.getPeerIdByRskAddress(receiverAddress);
+            const peer = this.peerService.create(peerId);
+            await peer.publish({content: payload, receiver: receiverAddress, sender: senderAddress});
+            callback(null, {});
+        } catch (e) {
+            callback({code: grpc.status.NOT_FOUND, message: e.message}, {});
+        }
+
     }
 
 
@@ -155,9 +167,11 @@ class CommunicationsApiImpl implements CommunicationsApi {
             });
         } catch (err) {
             console.log(err)
-            callback({connectCommsError: {
-                reason: err.message
-            }},null);
+            callback({
+                connectCommsError: {
+                    reason: err.message
+                }
+            }, null);
         }
     }
 
@@ -177,7 +191,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
         //TODO if there's no active stream the server should warn the user
         console.log(`publishing ${parameters.request.message.payload} in topic ${parameters.request.topic.channelId} `)
         const peer = this.peerService.create(parameters.request.topic.channelId);
-        peer.publish({ content: parameters.request.message.payload});
+        peer.publish({content: parameters.request.message.payload});
         callback();
     }
 
@@ -198,7 +212,8 @@ class CommunicationsApiImpl implements CommunicationsApi {
     }
 
 
-    endCommunication(parameters: any, callback: any): void {}
+    endCommunication(parameters: any, callback: any): void {
+    }
 
     getSubscribers(parameters: any, callback: any): void {
         let status: any = null;
