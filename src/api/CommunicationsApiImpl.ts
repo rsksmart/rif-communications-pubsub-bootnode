@@ -44,7 +44,14 @@ class CommunicationsApiImpl implements CommunicationsApi {
             }
             callback();
         } catch (error) {
-            callback({code: grpc.status.NOT_FOUND, message: `Peer was not subscribed to ${subscription.topic.address}`});
+            const err = {subscribeError: {
+                    channel: {
+                        channelId: ""
+                    },
+                    reason: error.message
+                }
+            }
+            callback({code: grpc.status.NOT_FOUND, message: err});
         }
     }
 
