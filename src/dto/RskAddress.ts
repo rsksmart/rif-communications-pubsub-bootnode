@@ -1,3 +1,0 @@
-interface RskAddress {
-    address: string;
-}

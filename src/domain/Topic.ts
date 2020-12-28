@@ -28,10 +28,6 @@ class Topic {
     hasSubscribers(): boolean {
         return this.subscribers.size > 0;
     }
-
-    hasSubscriber(subscriber: string): boolean {
-        return this.subscribers.has(subscriber);
-    }
 }
 
 export default Topic;
