@@ -15,11 +15,7 @@ class Peer {
       this.room.on('message', (message: any) => {
         console.log(`${id}: message\n`, this.formatMessage(message))
 
-        const channels = []
-        for (let index = 0; index < message.topicIDs.length; index++) {
-          const topicId: string = message.topicIDs[index]
-          channels.push({ channelId: topicId })
-        }
+        const channels = message.topicIDs.map((topicId: string) => ({ channelId: topicId }))
 
         if (message.signature != null) {
           if (message.key != null) {
