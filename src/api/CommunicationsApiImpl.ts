@@ -6,22 +6,26 @@ import grpc from 'grpc';
 import EncodingService from "../service/EncodingService";
 import CommunicationsApi from "./CommunicationsApi";
 import PeerService from "../service/PeerService";
+import RskSubscription from "../dto/RskSubscription";
 
 class CommunicationsApiImpl implements CommunicationsApi {
 
     constructor(
-            private peerId: any,
-            private encoding: EncodingService,
-            private dht: DhtService,
-            private peerService: PeerService,
-            private directChat: DirectChat) {}
+        private peerId: any,
+        private encoding: EncodingService,
+        private dht: DhtService,
+        private peerService: PeerService,
+        private directChat: DirectChat) {
+    }
 
-    async IsSubscribedToRskAddress({request: rskAddressTopic}: any, callback: any): Promise<void> {
-        console.log("IsSubscribedToRskAddress", rskAddressTopic)
+    async IsSubscribedToRskAddress({request: subscription}: { request: RskSubscription }, callback: any): Promise<void> {
+        console.log("IsSubscribedToRskAddress", subscription)
         try {
-            const peerId = await this.dht.getPeerIdByRskAddress(rskAddressTopic.address);
+            const peerId = await this.dht.getPeerIdByRskAddress(subscription.topic.address);
             callback(null, {
-                value: this.peerService.get(peerId)?.getTopic(rskAddressTopic.address)?.hasSubscribers()
+                value: this.peerService.get(peerId)
+                    ?.getTopic(subscription.topic.address)
+                    ?.hasSubscriber(subscription.subscriber.address)
             });
         } catch (error) {
             callback(null, {value: false});
@@ -35,18 +39,17 @@ class CommunicationsApiImpl implements CommunicationsApi {
             const peerId = await this.dht.getPeerIdByRskAddress(subscription.topic.address);
             const peer = this.peerService.get(peerId);
             const topic = peer?.getTopic(subscription.topic.address);
+            if (!topic) {
+                throw new Error("Topic not found");
+            }
             topic?.unsubscribe(subscriber.address);
             if (!topic?.hasSubscribers()) {
                 peer?.deleteTopic(subscription.topic.address);
             }
-            callback();
+            callback(null, {});
         } catch (error) {
-            callback({subscribeError: {
-                channel: {
-                    channelId: ""
-                },
-                reason: error.message
-            }});
+            console.log(error);
+            callback({code: grpc.status.NOT_FOUND, message: `not subscribed to ${subscription.topic.address}` });
         }
     }
 
@@ -54,17 +57,26 @@ class CommunicationsApiImpl implements CommunicationsApi {
         console.log(`sendMessageToTopic ${parameters} `)
         const peer = this.peerService.create(parameters.request.topic.channelId);
 
-        peer.publish({ content: parameters.request.message.payload});
+        peer.publish({content: parameters.request.message.payload});
         callback(status, {});
     }
 
     async sendMessageToRskAddress({request}: any, callback: any): Promise<void> {
         console.log(`sendMessageToRskAddress ${JSON.stringify(request)}`)
-        const {receiver: {address: receiverAddress}, sender: {address: senderAddress}, message: {payload}} = request;
-        const peerId = await this.dht.getPeerIdByRskAddress(receiverAddress);
-        const peer = this.peerService.create(peerId);
-        peer.publish({ content: payload, receiver: receiverAddress, sender: senderAddress});
-        callback(null, {});
+        try {
+            const {
+                receiver: {address: receiverAddress},
+                sender: {address: senderAddress},
+                message: {payload}
+            } = request;
+            const peerId = await this.dht.getPeerIdByRskAddress(receiverAddress);
+            const peer = this.peerService.create(peerId);
+            await peer.publish({content: payload, receiver: receiverAddress, sender: senderAddress});
+            callback(null, {});
+        } catch (e) {
+            callback({code: grpc.status.NOT_FOUND, message: e.message}, {});
+        }
+
     }
 
 
@@ -83,7 +95,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
             const address = await this.dht.getPeerIdByRskAddress(parameters.request.address);
             response = {address: address};
         } catch (e) {
-            status = {code: grpc.status.UNKNOWN, message: e.message}
+            status = {code: grpc.status.NOT_FOUND, message: "not found"}
         }
 
 
@@ -153,12 +165,9 @@ class CommunicationsApiImpl implements CommunicationsApi {
                 notification: Buffer.from('OK', 'utf8'),
                 payload: Buffer.from('connection established', 'utf8')
             });
-        } catch (err) {
-            console.log(err)
-            callback({
-                notification: Buffer.from('ERROR', 'utf8'),
-                payload: Buffer.from(err.message, 'utf8')
-            });
+        } catch (error) {
+            console.log(error);
+            callback({code: grpc.status.NOT_FOUND, message: `not found ${parameters.request.address}`});
         }
     }
 
@@ -168,7 +177,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
 
     //TODO the function must write to the stream not to a console log
     subscribe(parameters: any, callback: any): void {
-        callback();
+        callback(null, {});
     }
 
     /*Implementation of protobuf service
@@ -178,8 +187,8 @@ class CommunicationsApiImpl implements CommunicationsApi {
         //TODO if there's no active stream the server should warn the user
         console.log(`publishing ${parameters.request.message.payload} in topic ${parameters.request.topic.channelId} `)
         const peer = this.peerService.create(parameters.request.topic.channelId);
-        peer.publish({ content: parameters.request.message.payload});
-        callback();
+        peer.publish({content: parameters.request.message.payload});
+        callback(null,{});
     }
 
     async sendMessage(parameters: any, callback: any): Promise<void> {
@@ -199,7 +208,8 @@ class CommunicationsApiImpl implements CommunicationsApi {
     }
 
 
-    endCommunication(parameters: any, callback: any): void {}
+    endCommunication(parameters: any, callback: any): void {
+    }
 
     getSubscribers(parameters: any, callback: any): void {
         let status: any = null;
