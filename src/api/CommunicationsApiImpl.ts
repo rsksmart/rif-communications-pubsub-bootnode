@@ -95,7 +95,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
             const address = await this.dht.getPeerIdByRskAddress(parameters.request.address);
             response = {address: address};
         } catch (e) {
-            status = {code: grpc.status.UNKNOWN, message: e.message}
+            status = {code: grpc.status.NOT_FOUND, message: "not found"}
         }
 
 
