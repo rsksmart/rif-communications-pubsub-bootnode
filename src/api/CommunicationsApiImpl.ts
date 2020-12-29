@@ -48,14 +48,8 @@ class CommunicationsApiImpl implements CommunicationsApi {
             }
             callback(null, {});
         } catch (error) {
-            const err = {subscribeError: {
-                channel: {
-                    channelId: ""
-                },
-                reason: error.message
-            }
-            }
-            callback({code: grpc.status.NOT_FOUND, message: JSON.stringify(err)});
+            console.log(error);
+            callback({code: grpc.status.NOT_FOUND, message: `not subscribed to ${subscription.topic.address}` });
         }
     }
 
@@ -172,12 +166,8 @@ class CommunicationsApiImpl implements CommunicationsApi {
                 payload: Buffer.from('connection established', 'utf8')
             });
         } catch (error) {
-           const err = {
-                connectCommsError: {
-                    reason: error.message
-                }
-            }
-            callback({code: grpc.status.NOT_FOUND, message: JSON.stringify(err)});
+            console.log(error);
+            callback({code: grpc.status.NOT_FOUND, message: `not found ${parameters.request.address}`});
         }
     }
 
