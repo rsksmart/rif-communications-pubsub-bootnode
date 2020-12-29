@@ -20,5 +20,10 @@
   // Port the GRPC server is listening to
   grpcPort: 50051,
   generatePeerWithSecp256k1Keys: true,
-  displayPeerId: true
+  displayPeerId: true,
+
+  authorization: {
+    expiresIn: '1h',
+    secret: ''
+  }
 }
