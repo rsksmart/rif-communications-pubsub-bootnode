@@ -39,20 +39,17 @@ class CommunicationsApiImpl implements CommunicationsApi {
             const peerId = await this.dht.getPeerIdByRskAddress(subscription.topic.address);
             const peer = this.peerService.get(peerId);
             const topic = peer?.getTopic(subscription.topic.address);
+            if (!topic) {
+                throw new Error("Topic not found");
+            }
             topic?.unsubscribe(subscriber.address);
             if (!topic?.hasSubscribers()) {
                 peer?.deleteTopic(subscription.topic.address);
             }
-            callback();
+            callback(null, {});
         } catch (error) {
-            callback({
-                subscribeError: {
-                    channel: {
-                        channelId: ""
-                    },
-                    reason: error.message
-                }
-            }, null);
+            console.log(error);
+            callback({code: grpc.status.NOT_FOUND, message: `not subscribed to ${subscription.topic.address}` });
         }
     }
 
@@ -168,13 +165,9 @@ class CommunicationsApiImpl implements CommunicationsApi {
                 notification: Buffer.from('OK', 'utf8'),
                 payload: Buffer.from('connection established', 'utf8')
             });
-        } catch (err) {
-            console.log(err)
-            callback({
-                connectCommsError: {
-                    reason: err.message
-                }
-            }, null);
+        } catch (error) {
+            console.log(error);
+            callback({code: grpc.status.NOT_FOUND, message: `not found ${parameters.request.address}`});
         }
     }
 
@@ -184,7 +177,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
 
     //TODO the function must write to the stream not to a console log
     subscribe(parameters: any, callback: any): void {
-        callback();
+        callback(null, {});
     }
 
     /*Implementation of protobuf service
@@ -195,7 +188,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
         console.log(`publishing ${parameters.request.message.payload} in topic ${parameters.request.topic.channelId} `)
         const peer = this.peerService.create(parameters.request.topic.channelId);
         peer.publish({content: parameters.request.message.payload});
-        callback();
+        callback(null,{});
     }
 
     async sendMessage(parameters: any, callback: any): Promise<void> {
