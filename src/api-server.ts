@@ -1,6 +1,8 @@
 /* eslint no-console: 0 */
 import config from 'config'
 import { DirectChat } from '@rsksmart/rif-communications-pubsub'
+
+import { authorizationHandler, secureRoute } from './service/Authorization'
 import libP2PFactory from './service/LibP2PFactory'
 import DhtService from './service/DHTService'
 import EncodingService from './service/EncodingService'
@@ -85,22 +87,23 @@ async function getServer () {
   // console.log(commsApi);
   const server = new grpc.Server()
   server.addService(commsApi.CommunicationsApi.service, {
-    connectToCommunicationsNode: api.connectToCommunicationsNode.bind(api),
-    endCommunication: api.endCommunication.bind(api),
-    subscribe: api.subscribe.bind(api),
-    unsubscribe: api.unsubscribe.bind(api),
-    publish: api.publish.bind(api),
-    getSubscribers: api.getSubscribers.bind(api),
-    hasSubscriber: api.hasSubscriber.bind(api),
-    IsSubscribedToRskAddress: api.IsSubscribedToRskAddress.bind(api),
-    sendMessage: api.sendMessage.bind(api),
-    locatePeerId: api.locatePeerId.bind(api),
-    createTopicWithPeerId: api.createTopicWithPeerId.bind(api),
-    createTopicWithRskAddress: api.createTopicWithRskAddress.bind(api),
-    closeTopicWithRskAddress: api.closeTopicWithRskAddress.bind(api),
-    sendMessageToTopic: api.sendMessageToTopic.bind(api),
-    sendMessageToRskAddress: api.sendMessageToRskAddress.bind(api),
-    updateAddress: api.updateAddress.bind(api)
+    connectToCommunicationsNode: secureRoute(api.connectToCommunicationsNode.bind(api)),
+    endCommunication: secureRoute(api.endCommunication.bind(api)),
+    subscribe: secureRoute(api.subscribe.bind(api)),
+    unsubscribe: secureRoute(api.unsubscribe.bind(api)),
+    publish: secureRoute(api.publish.bind(api)),
+    getSubscribers: secureRoute(api.getSubscribers.bind(api)),
+    hasSubscriber: secureRoute(api.hasSubscriber.bind(api)),
+    IsSubscribedToRskAddress: secureRoute(api.IsSubscribedToRskAddress.bind(api)),
+    sendMessage: secureRoute(api.sendMessage.bind(api)),
+    locatePeerId: secureRoute(api.locatePeerId.bind(api)),
+    createTopicWithPeerId: secureRoute(api.createTopicWithPeerId.bind(api)),
+    createTopicWithRskAddress: secureRoute(api.createTopicWithRskAddress.bind(api)),
+    closeTopicWithRskAddress: secureRoute(api.closeTopicWithRskAddress.bind(api)),
+    sendMessageToTopic: secureRoute(api.sendMessageToTopic.bind(api)),
+    sendMessageToRskAddress: secureRoute(api.sendMessageToRskAddress.bind(api)),
+    updateAddress: secureRoute(api.updateAddress.bind(api)),
+    auth: authorizationHandler
   })
 
   return server

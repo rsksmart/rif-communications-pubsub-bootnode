@@ -2,6 +2,7 @@ import config from 'config'
 import jwt from 'jsonwebtoken'
 
 import { loggingFactory } from '../logger'
+import { createChallenge, removeChallengeForAddress, verifyChallenge } from './HandShake'
 
 type GRPCApiHandler = (...args: any[]) => void
 
@@ -37,6 +38,7 @@ export const secureRoute = (handler: GRPCApiHandler) => async (...args: any) => 
   const [call, callback] = args
 
   if (!isAuthorized(call)) {
+    // TODO add proper error messages
     if (callback) {
       callback({ error: 1 })
     } else {
@@ -44,4 +46,33 @@ export const secureRoute = (handler: GRPCApiHandler) => async (...args: any) => 
     }
   }
   await handler(...args)
+}
+
+export const authorizationHandler = async (call: any): Promise<void> => {
+  const { request: { address } } = call
+  if (!address) {
+    call.write({ error: 1 })
+    call.end()
+  }
+
+  // Generate challenge
+  const challenge = createChallenge(address)
+  // TODO proper message
+  call.write({ data: challenge })
+
+  call.on('data', (data: any) => {
+    switch (data.type) {
+      case 'signedChallenge':
+        if (verifyChallenge(address, data.data.signature)) {
+          removeChallengeForAddress(address)
+          // TODO proper message
+          call.write({ data: generateToken(address) })
+          call.end()
+          return
+        }
+        // TODO proper error message
+        call.write({ error: 1 })
+        break
+    }
+  })
 }

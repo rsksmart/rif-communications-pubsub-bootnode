@@ -24,6 +24,7 @@
 
   authorization: {
     expiresIn: '1h',
-    secret: ''
+    secret: '',
+    challengeSize: 32
   }
 }
