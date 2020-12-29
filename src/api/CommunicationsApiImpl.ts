@@ -55,7 +55,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
                 reason: error.message
             }
             }
-            callback({code: grpc.status.NOT_FOUND, message: err});
+            callback({code: grpc.status.NOT_FOUND, message: JSON.stringify(err)});
         }
     }
 
@@ -177,7 +177,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
                     reason: error.message
                 }
             }
-            callback({code: grpc.status.NOT_FOUND, message: err});
+            callback({code: grpc.status.NOT_FOUND, message: JSON.stringify(err)});
         }
     }
 
