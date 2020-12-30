@@ -2,7 +2,8 @@
 import config from 'config'
 import { DirectChat } from '@rsksmart/rif-communications-pubsub'
 
-import { authorizationHandler, secureRoute } from './service/Authorization'
+import { authorizationHandler, createChallengeHandler } from './api/auth/handler'
+import { secureRoute } from './api/auth/utils'
 import libP2PFactory from './service/LibP2PFactory'
 import DhtService from './service/DHTService'
 import EncodingService from './service/EncodingService'
@@ -103,7 +104,8 @@ async function getServer () {
     sendMessageToTopic: secureRoute(api.sendMessageToTopic.bind(api)),
     sendMessageToRskAddress: secureRoute(api.sendMessageToRskAddress.bind(api)),
     updateAddress: secureRoute(api.updateAddress.bind(api)),
-    auth: authorizationHandler
+    createChallenge: createChallengeHandler,
+    authorize: authorizationHandler
   })
 
   return server
