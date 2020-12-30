@@ -105,7 +105,7 @@ async function getServer () {
     sendMessageToRskAddress: secureRoute(api.sendMessageToRskAddress.bind(api)),
     updateAddress: secureRoute(api.updateAddress.bind(api)),
     createChallenge: createChallengeHandler,
-    authorize: authorizationHandler
+    auth: authorizationHandler
   })
 
   return server
