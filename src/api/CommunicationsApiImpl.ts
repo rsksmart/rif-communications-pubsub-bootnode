@@ -139,10 +139,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
         } catch (e) {
             call.write({
                 subscribeError: {
-                    channel: {
-                        channelId: ""
-                    },
-                    reason: e.message
+                    reason: `Address ${call.request.topic.address} not found`
                 }
             })
         }
