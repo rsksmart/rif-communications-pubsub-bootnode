@@ -74,7 +74,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
             await peer.publish({content: payload, receiver: receiverAddress, sender: senderAddress});
             callback(null, {});
         } catch (e) {
-            callback({code: grpc.status.NOT_FOUND, message: e.message}, {});
+            callback({code: grpc.status.NOT_FOUND, message: "not found"}, {});
         }
 
     }
