@@ -42,23 +42,19 @@ class CommunicationsApiImpl implements CommunicationsApi {
       const peerId = await this.dht.getPeerIdByRskAddress(subscription.topic.address)
       const peer = this.peerService.get(peerId)
       const topic = peer?.getTopic(subscription.topic.address)
+            if (!topic) {
+                throw new Error("Topic not found");
+            }
             topic?.unsubscribe(subscriber.address)
-
             if (!topic?.hasSubscribers()) {
                 peer?.deleteTopic(subscription.topic.address)
             }
-            callback()
-    } catch (error) {
-      callback({
-        subscribeError: {
-          channel: {
-            channelId: ''
-          },
-          reason: error.message
+            callback(null, {});
+        } catch (error) {
+            console.log(error);
+            callback({ code: grpc.status.NOT_FOUND, message: `not subscribed to ${subscription.topic.address}` })
         }
-      }, null)
     }
-  }
 
   async sendMessageToTopic (parameters: any, callback: any): Promise<void> {
     logger.info(`sendMessageToTopic ${parameters} `)
@@ -81,7 +77,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
       await peer.publish({ content: payload, receiver: receiverAddress, sender: senderAddress })
       callback(null, {})
     } catch (e) {
-      callback({ code: grpc.status.NOT_FOUND, message: e.message }, {})
+      callback({ code: grpc.status.NOT_FOUND, message: 'not found' }, {})
     }
   }
 
@@ -99,7 +95,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
       const address = await this.dht.getPeerIdByRskAddress(parameters.request.address)
       response = { address: address }
     } catch (e) {
-      status = { code: grpc.status.UNKNOWN, message: e.message }
+      status = { code: grpc.status.NOT_FOUND, message: "not found" }
     }
 
     callback(status, response)
@@ -131,24 +127,21 @@ class CommunicationsApiImpl implements CommunicationsApi {
       const topic = peer.createTopic(call.request.topic.address)
             topic?.subscribe(call.request.subscriber.address, call)
             call.write({
-              channelPeerJoined: {
-                channel: {
-                  channelId: peerId
-                },
-                peerId: peerId
-              }
+                channelPeerJoined: {
+                    channel: {
+                        channelId: peerId
+                    },
+                    peerId: peerId
+                }
+            });
+        } catch (e) {
+            call.write({
+                subscribeError: {
+                    reason: `Address ${call.request.topic.address} not found`
+                }
             })
-    } catch (e) {
-      call.write({
-        subscribeError: {
-          channel: {
-            channelId: ''
-          },
-          reason: e.message
         }
-      })
     }
-  }
 
   /* Implementation of protobuf service
         rpc ConnectToCommunicationsNode(NoParams) returns (stream Notification);
@@ -167,13 +160,10 @@ class CommunicationsApiImpl implements CommunicationsApi {
         notification: Buffer.from('OK', 'utf8'),
         payload: Buffer.from('connection established', 'utf8')
       })
-    } catch (err) {
-      logger.error(err)
+    } catch (error) {
+      logger.error(error);
       callback({
-        connectCommsError: {
-          reason: err.message
-        }
-      }, null)
+        code: grpc.status.NOT_FOUND, message: `not found ${parameters.request.address}`})
     }
   }
 
@@ -183,7 +173,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
 
   // TODO the function must write to the stream not to a console log
   subscribe (parameters: any, callback: any): void {
-    callback()
+    callback(null, {})
   }
 
   /* Implementation of protobuf service
@@ -194,7 +184,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
     logger.info(`publishing ${parameters.request.message.payload} in topic ${parameters.request.topic.channelId} `)
     const peer = this.peerService.create(parameters.request.topic.channelId)
     peer.publish({ content: parameters.request.message.payload })
-    callback()
+    callback(null,{})
   }
 
   async sendMessage (parameters: any, callback: any): Promise<void> {
