@@ -1,3 +1,3 @@
-interface RskAddress {
-    address: string;
+export interface RskAddress {
+    address: string
 }

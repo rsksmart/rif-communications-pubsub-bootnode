@@ -5,18 +5,16 @@ const keyEncoder: KeyEncoder = new KeyEncoder('secp256k1')
 
 /* Password-based encryption implementation. */
 
-
-
-function decryptDERPrivateKey(der: Buffer, password: string) {
+function decryptDERPrivateKey (der: Buffer, password: string) {
   if (password === '') {
     throw new Error('Decryption password cannot be blank')
   }
-  const keyFromDer = asn1.fromDer(der.toString('binary'));
+  const keyFromDer = asn1.fromDer(der.toString('binary'))
 
   const rval = pki.decryptPrivateKeyInfo(
     keyFromDer,
     password
-  );
+  )
 
   if (typeof rval.value[2] === 'string') {
     throw new Error(
@@ -31,10 +29,10 @@ function decryptDERPrivateKey(der: Buffer, password: string) {
     )
   }
 
-  const privKeyDer = new util.ByteStringBuffer(rval.value[2].value);
-  const rawPrivKey = keyEncoder.encodePrivate(privKeyDer.toHex(), 'der', 'raw');
-  const rawPrivBuf = Buffer.from(rawPrivKey, 'hex');
-  return rawPrivBuf;
+  const privKeyDer = new util.ByteStringBuffer(rval.value[2].value)
+  const rawPrivKey = keyEncoder.encodePrivate(privKeyDer.toHex(), 'der', 'raw')
+  const rawPrivBuf = Buffer.from(rawPrivKey, 'hex')
+  return rawPrivBuf
 }
 
 /**
@@ -45,7 +43,7 @@ function decryptDERPrivateKey(der: Buffer, password: string) {
  *
  * @return the key on success, null on failure.
  */
-function decryptPrivateKey(pem: string, password: string) {
+function decryptPrivateKey (pem: string, password: string) {
   if (password === '') {
     throw new Error('Decryption password cannot be blank')
   }
@@ -74,11 +72,11 @@ function decryptPrivateKey(pem: string, password: string) {
   return Buffer.from(rawPrivKey, 'hex')
 }
 
-function generateRawKeyFromKeyInfo(privateKeyInfo: any) {
+function generateRawKeyFromKeyInfo (privateKeyInfo: any) {
   return keyEncoder.encodePrivate(privateKeyInfo, 'pem', 'raw')
 }
 
-function createPrivateKeyInfo(peerId: any) {
+function createPrivateKeyInfo (peerId: any) {
   const pkinfo = keyEncoder.encodePrivate(
     peerId.privKey.marshal().toString('hex'),
     'raw',
@@ -124,7 +122,7 @@ function createPrivateKeyInfo(peerId: any) {
  * If the password is blank or null then no encryption is used
  * @param {string} [format] - Defaults to 'pkcs-8'.
  */
-function exportKey(
+function exportKey (
   peerId: any,
   password: string | undefined,
   format = 'pkcs-8'
@@ -158,4 +156,4 @@ function exportKey(
   }
 }
 
-export { exportKey, decryptPrivateKey,decryptDERPrivateKey, generateRawKeyFromKeyInfo }
+export { exportKey, decryptPrivateKey, decryptDERPrivateKey, generateRawKeyFromKeyInfo }

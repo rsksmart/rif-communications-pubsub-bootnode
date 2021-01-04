@@ -54,6 +54,12 @@ service CommunicationsApi {
     //Update RSK Address after invitation
     rpc UpdateAddress(RskAddress) returns (Void);
 
+    // Create challenge for handshake
+    rpc CreateChallenge(RskAddress) returns (Challenge);
+
+    // Verify the challenge for handshake and return JWT token on success
+    rpc Auth(Auth) returns (Token);
+
 }
 
 //The topic
@@ -79,6 +85,19 @@ message PeerId {
 message PeerSubscription {
     PeerId subscriber = 1;
     PeerId topic =  2;
+}
+
+message Challenge {
+    bytes challenge = 1;
+}
+
+message Auth {
+    string address = 1;
+    bytes signature = 2;
+}
+
+message Token {
+    string token = 1;
 }
 
 /*RPC needs a message, so when there are no params to send, this empty message is used*/
@@ -132,7 +151,7 @@ message Notification {
         SubscribeError subscribeError = 8;
         ConnectCommsError connectCommsError = 9;
         EndCommsError endCommsError = 10;
-        
+
     }
 }
 
