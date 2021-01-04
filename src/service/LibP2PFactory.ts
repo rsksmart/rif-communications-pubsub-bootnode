@@ -1,5 +1,5 @@
 import Libp2p from 'libp2p'
-import { IConfig } from 'config'
+import Config  from 'config'
 import PeerId from 'peer-id'
 import { createLibP2P } from '@rsksmart/rif-communications-pubsub'
 import { isValidPeerId, loadEncryptedPeerId } from '../peer-utils'
@@ -8,7 +8,7 @@ class LibP2PFactory {
   constructor () {
   }
 
-  async fromConfig (config: IConfig): Promise<Libp2p> {
+  async fromConfig (config: typeof Config): Promise<Libp2p> {
     if (config.has('key') && config.get('key') != '') {
       return await this.fromKey(config)
     }
@@ -22,7 +22,7 @@ class LibP2PFactory {
     return await this.fromNewPeer(config)
   }
 
-  private async fromKey (config: IConfig): Promise<Libp2p> {
+  private async fromKey (config: typeof Config): Promise<Libp2p> {
     const libp2pConfig = config.get('libp2p') as Record<string, any>
     const keyConfig = config.get('key') as Record<string, any>
     const peerId: PeerId = await loadEncryptedPeerId(new URL(keyConfig.get('privateKeyURLPath')),
@@ -35,7 +35,7 @@ class LibP2PFactory {
     return await createLibP2P({ ...libp2pConfig, peerId })
   }
 
-  private async fromPeerId (config: IConfig) {
+  private async fromPeerId (config: typeof Config) {
     const libp2pConfig = config.get('libp2p') as Record<string, any>
     const cnfId = config.get<{ id: string, privKey: string, pubKey: string }>('peerId')
     const peerId = await PeerId.createFromJSON(cnfId)
@@ -47,7 +47,7 @@ class LibP2PFactory {
     return await createLibP2P({ ...libp2pConfig, peerId })
   }
 
-  private async fromNewPeer (config: IConfig) {
+  private async fromNewPeer (config: typeof Config) {
     const libp2pConfig = config.get('libp2p') as Record<string, any>
 
     if (config.get('generatePeerWithSecp256k1Keys')) {
