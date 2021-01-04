@@ -111,7 +111,7 @@ async function getServer () {
   return server
 }
 
-async function main () {
+export async function main () {
   // If this is run as a script, start a server on an unused port
   const apiServer = await getServer()
   const grpcPort: string = config.get('grpcPort') as string
@@ -121,6 +121,7 @@ async function main () {
   })
   apiServer.start()
   console.log(`GRPC Server started on port ${grpcPort}`)
+  return apiServer
 }
 
 if (require.main === module) {
