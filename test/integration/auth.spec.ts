@@ -1,6 +1,7 @@
 import config from 'config'
 import chai from 'chai'
 import sinonChai from 'sinon-chai'
+import grpc from 'grpc'
 
 import { getGRPCClient, promisifyCall } from '../utils'
 import { main as startServer } from '../../src/api-server'
@@ -20,6 +21,25 @@ describe('Auth for gRPC', function() {
     server = await startServer()
     client = getGRPCClient(`localhost:${config.get('grpcPort')}`)
     console.log(`Client created for localhost:${config.get('grpcPort')}`)
+  })
+  it('should return error when accessing secure route without auth', async () => {
+    try {
+      await promisifyCall((callback: any) => client.updateAddress({ address: TEST_ADDRESS }, callback))
+    } catch (e) {
+      expect(e.code).to.be.eql(grpc.status.UNAUTHENTICATED)
+      expect(e.details).to.be.eql('Not authorized')
+    }
+  })
+  it('should return error when accessing secure ASYNC route without auth', async () => {
+    await new Promise((resolve, reject) => {
+      const call = client.CreateTopicWithPeerId({ address: 'someSortOFADdress' })
+      call.on('data', (data: any, err: any) => {})
+      call.on('error', (error: any) => {
+        expect(error.code).to.be.eql(grpc.status.UNAUTHENTICATED)
+        expect(error.details).to.be.eql('Not authorized')
+        resolve()
+      })
+    })
   })
   describe('Create Challenge', () => {
     it('should create a random challenge', async () => {
