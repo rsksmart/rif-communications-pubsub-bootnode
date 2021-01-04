@@ -26,5 +26,11 @@
     expiresIn: '1h',
     secret: '',
     challengeSize: 32
+  },
+
+  log: {
+    level: "debug",
+    filter: null,
+    path: null
   }
 }

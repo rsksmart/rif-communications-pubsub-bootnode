@@ -1,5 +1,7 @@
 import config from "config"
 import jwt from 'jsonwebtoken'
+import grpc from 'grpc'
+
 import { loggingFactory } from '../../logger'
 
 type GRPCApiHandler = (...args: any[]) => void
@@ -7,13 +9,13 @@ type GRPCApiHandler = (...args: any[]) => void
 const logger = loggingFactory('authorization')
 
 export const isAuthorized = (call: any): boolean => {
-  if (!call.metadata._internal_repr.authorization == null) {
+  if (!call.metadata._internal_repr.authorization) {
     return false
   }
 
   try {
     return Boolean(jwt.verify(
-        call.metadata._internal_repr.authorization.toString(),
+        call.metadata._internal_repr.authorization?.toString(),
         config.get<string>('authorization.secret')
     ))
   } catch (e) {
@@ -43,13 +45,12 @@ export const generateToken = (rskAddress: string): string => {
  */
 export const secureRoute = (handler: GRPCApiHandler) => async (...args: any) => {
   const [call, callback] = args
-
   if (!isAuthorized(call)) {
     const error = { code: grpc.status.UNAUTHENTICATED, message: 'Not authorized' }
     if (callback) {
       callback(error)
     } else {
-      call.write(error)
+      call.emit('error', error)
       call.end()
     }
     return
