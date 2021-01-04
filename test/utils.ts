@@ -29,3 +29,7 @@ export const promisifyCall = (call: Function): Promise<any> => {
     })
   })
 }
+
+export const hexToBuffer = (hex: string): Buffer => Buffer.from(hex.replace('0x', ''), 'hex')
+
+export const sleep = (timeout: number) => new Promise((resolve) => setTimeout(() => resolve(), timeout))

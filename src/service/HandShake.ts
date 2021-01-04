@@ -2,18 +2,24 @@ import config from 'config'
 import { randomBytes } from 'crypto'
 import { utils } from 'ethers'
 
-const challengeMap = new Map<string, string>()
+import { loggingFactory } from '../logger'
 
-export const createChallenge = (address: string): string => {
-  const challenge = randomBytes(config.get<number>('authorization.challengeSize')).toString('hex')
+const logger = loggingFactory('handshake')
+
+const challengeMap = new Map<string, Buffer>()
+
+export const createChallenge = (address: string): Buffer => {
+  const challenge = randomBytes(config.get<number>('authorization.challengeSize'))
   challengeMap.set(address, challenge)
+  logger.debug(`Created challenge for address = ${address}`)
   return challenge
 }
 
-export const verifyChallenge = (address: string, sig: string | Buffer): boolean => {
+export const verifyChallenge = (address: string, sig: Buffer): boolean => {
   const challenge = challengeMap.get(address)
 
   if (!challenge) {
+    logger.debug(`Challenge not found for address ${address}`)
     throw new Error(`Challenge not found for address ${address}`)
   }
 
@@ -21,5 +27,6 @@ export const verifyChallenge = (address: string, sig: string | Buffer): boolean 
 }
 
 export const removeChallengeForAddress = (address: string): void => {
+  logger.debug(`Challenge for address = ${address} removed`)
   challengeMap.delete(address)
 }

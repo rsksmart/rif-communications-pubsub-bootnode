@@ -1,5 +1,10 @@
+import grpc from 'grpc'
+
+import { loggingFactory } from '../../logger'
 import { createChallenge, removeChallengeForAddress, verifyChallenge } from '../../service/HandShake'
 import { generateToken } from './utils'
+
+const logger = loggingFactory('auth')
 
 /**
  * Generate 32 bytes challenge and store it for corresponding rsk address
@@ -9,6 +14,7 @@ import { generateToken } from './utils'
 export const createChallengeHandler = (call: any, callback: any): void => {
   const { request: { address } } = call
 
+  logger.info(`Creating challenge for address = ${address}`)
   callback(null, { challenge: createChallenge(address) })
 }
 
@@ -25,8 +31,9 @@ export const authorizationHandler = (call: any, callback: any) => {
       throw new Error('Invalid signature')
     }
     removeChallengeForAddress(address)
+    logger.info(`Address = ${address} successfully authorized`)
     callback(null, { token: generateToken(address) })
   } catch (e) {
-    callback({ authorizationError: { reason: e.message } }, {})
+    callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Invalid signature' }, {})
   }
 }

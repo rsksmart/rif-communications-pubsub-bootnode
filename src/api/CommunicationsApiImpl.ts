@@ -1,12 +1,16 @@
 /* eslint no-console: 0 */
 import { DirectChat } from '@rsksmart/rif-communications-pubsub'
 import { retry } from '@lifeomic/attempt'
-import DhtService from '../service/DHTService'
 import grpc from 'grpc'
+
+import { loggingFactory } from '../logger'
+import DhtService from '../service/DHTService'
 import EncodingService from '../service/EncodingService'
 import CommunicationsApi from './CommunicationsApi'
 import PeerService from '../service/PeerService'
 import RskSubscription from '../dto/RskSubscription'
+
+const logger = loggingFactory('CommunicationsApi')
 
 class CommunicationsApiImpl implements CommunicationsApi {
   constructor (
@@ -18,7 +22,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
   }
 
   async IsSubscribedToRskAddress ({ request: subscription }: { request: RskSubscription }, callback: any): Promise<void> {
-    console.log('IsSubscribedToRskAddress', subscription)
+    logger.info('IsSubscribedToRskAddress', subscription)
     try {
       const peerId = await this.dht.getPeerIdByRskAddress(subscription.topic.address)
       callback(null, {
@@ -32,7 +36,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
   }
 
   async closeTopicWithRskAddress ({ request: subscription }: any, callback: any): Promise<void> {
-    console.log(`closeTopic ${JSON.stringify(subscription)} `)
+    logger.info(`closeTopic ${JSON.stringify(subscription)} `)
     try {
       const { subscriber } = subscription
       const peerId = await this.dht.getPeerIdByRskAddress(subscription.topic.address)
@@ -57,7 +61,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
   }
 
   async sendMessageToTopic (parameters: any, callback: any): Promise<void> {
-    console.log(`sendMessageToTopic ${parameters} `)
+    logger.info(`sendMessageToTopic ${parameters} `)
     const peer = this.peerService.create(parameters.request.topic.channelId)
 
     peer.publish({ content: parameters.request.message.payload })
@@ -65,7 +69,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
   }
 
   async sendMessageToRskAddress ({ request }: any, callback: any): Promise<void> {
-    console.log(`sendMessageToRskAddress ${JSON.stringify(request)}`)
+    logger.info(`sendMessageToRskAddress ${JSON.stringify(request)}`)
     try {
       const {
         receiver: { address: receiverAddress },
@@ -82,7 +86,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
   }
 
   async updateAddress (parameters: any, callback: any): Promise<void> {
-    console.log(`updateAddress ${parameters} `)
+    logger.info(`updateAddress ${parameters} `)
     callback(null, {})
   }
 
@@ -91,7 +95,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
     let response: any = {}
 
     try {
-      console.log(`locatePeerID ${JSON.stringify(parameters.request.address)} `)
+      logger.info(`locatePeerID ${JSON.stringify(parameters.request.address)} `)
       const address = await this.dht.getPeerIdByRskAddress(parameters.request.address)
       response = { address: address }
     } catch (e) {
@@ -103,7 +107,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
 
   async createTopicWithPeerId (call: any) {
     try {
-      console.log(`createTopicWithPeerId ${JSON.stringify(call.request)} `)
+      logger.info(`createTopicWithPeerId ${JSON.stringify(call.request)} `)
       const peer = this.peerService.create(call.request.topic.address)
       const topic = peer.createTopic(call.request.topic.address)
             topic?.subscribe(call.request.subscriber.address, call)
@@ -120,7 +124,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
   }
 
   async createTopicWithRskAddress (call: any) {
-    console.log(`createTopicWithRskAddress ${JSON.stringify(call.request)} `)
+    logger.info(`createTopicWithRskAddress ${JSON.stringify(call.request)} `)
     try {
       const peerId = await this.dht.getPeerIdByRskAddress(call.request.topic.address)
       const peer = this.peerService.create(peerId)
@@ -150,7 +154,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
         rpc ConnectToCommunicationsNode(NoParams) returns (stream Notification);
     */
   async connectToCommunicationsNode (parameters: any, callback: any) {
-    console.log('connectToCommunicationsNode', JSON.stringify(parameters.request))
+    logger.info('connectToCommunicationsNode ' + JSON.stringify(parameters.request))
 
     try {
       await retry(async (context) => {
@@ -164,7 +168,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
         payload: Buffer.from('connection established', 'utf8')
       })
     } catch (err) {
-      console.log(err)
+      logger.error(err)
       callback({
         connectCommsError: {
           reason: err.message
@@ -187,14 +191,14 @@ class CommunicationsApiImpl implements CommunicationsApi {
     */
   async publish (parameters: any, callback: any) {
     // TODO if there's no active stream the server should warn the user
-    console.log(`publishing ${parameters.request.message.payload} in topic ${parameters.request.topic.channelId} `)
+    logger.info(`publishing ${parameters.request.message.payload} in topic ${parameters.request.topic.channelId} `)
     const peer = this.peerService.create(parameters.request.topic.channelId)
     peer.publish({ content: parameters.request.message.payload })
     callback()
   }
 
   async sendMessage (parameters: any, callback: any): Promise<void> {
-    console.log(`sending ${parameters.request.message.payload} to ${parameters.request.to} `)
+    logger.info(`sending ${parameters.request.message.payload} to ${parameters.request.to} `)
 
     await this.directChat.sendTo(parameters.request.to, { level: 'info', msg: parameters.request.message.payload })
     callback(null, {})
@@ -231,7 +235,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
 
   hasSubscriber (parameters: any, callback: any): void {
     let response: any = {}
-    console.log('hasSubscriber', parameters)
+    logger.info('hasSubscriber', parameters)
     try {
       const { channelId, peerId } = parameters.request.channel
       response = { value: this.peerService.get(channelId)?.getPeers()?.length }

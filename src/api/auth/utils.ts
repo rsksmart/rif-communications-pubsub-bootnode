@@ -1,4 +1,4 @@
-import config from "config"
+import config from 'config'
 import jwt from 'jsonwebtoken'
 import grpc from 'grpc'
 
@@ -9,13 +9,13 @@ type GRPCApiHandler = (...args: any[]) => void
 const logger = loggingFactory('authorization')
 
 export const isAuthorized = (call: any): boolean => {
-  if (!call.metadata._internal_repr.authorization) {
+  if (!call.metadata.get('authorization')) {
     return false
   }
 
   try {
     return Boolean(jwt.verify(
-        call.metadata._internal_repr.authorization?.toString(),
+        call.metadata.get('authorization')?.toString().split(' ')[1],
         config.get<string>('authorization.secret')
     ))
   } catch (e) {
