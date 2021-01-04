@@ -31,9 +31,7 @@ export const isAuthorized = (call: any): boolean => {
  */
 export const generateToken = (rskAddress: string): string => {
   return jwt.sign(
-      {
-        rskAddress
-      },
+      { rskAddress },
       config.get<string>('authorization.secret'),
       { expiresIn: config.get<string>('authorization.expiresIn') }
   )

@@ -18,6 +18,11 @@
       }
     }
   },
+  authorization: {
+    expiresIn: 'RIFC_AUTH_TOKEN_EXPIRES_IN',
+    secret: 'RIFC_AUTH_TOKEN_SECRET',
+    challengeSize: 'RIFC_AUTH_CHALLENGE_SIZE'
+  },
   rooms: {
     "__name": "RIFC_ROOMS",
     "__format": "json"

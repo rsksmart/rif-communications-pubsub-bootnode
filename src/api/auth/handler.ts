@@ -28,8 +28,10 @@ export const authorizationHandler = (call: any, callback: any) => {
 
   try {
     if (!verifyChallenge(address, signature)) {
-      throw new Error('Invalid signature')
+      callback({ code: grpc.status.INVALID_ARGUMENT, message: 'Invalid signature' }, {})
+      return
     }
+
     removeChallengeForAddress(address)
     logger.info(`Address = ${address} successfully authorized`)
     callback(null, { token: generateToken(address) })

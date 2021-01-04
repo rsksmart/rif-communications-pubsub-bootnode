@@ -96,9 +96,8 @@ function enabled (name: string): boolean {
 const filterServices = format(info => {
   if (info.metadata.service) {
     return enabled(info.metadata.service) ? info : false
-  } else {
-    return info
   }
+  return info
 })
 
 /**
