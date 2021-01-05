@@ -113,7 +113,8 @@ class CommunicationsApiImpl implements CommunicationsApi {
             call.emit('error', {
                 code: grpc.status.UNKNOWN,
                 message: e.message
-            })
+            });
+            call.end();
         }
     }
 
@@ -136,7 +137,8 @@ class CommunicationsApiImpl implements CommunicationsApi {
             call.emit('error', {
                 code: grpc.status.NOT_FOUND,
                 message: `Address ${call.request.topic.address} not found`
-            })
+            });
+            call.end();
         }
     }
 
