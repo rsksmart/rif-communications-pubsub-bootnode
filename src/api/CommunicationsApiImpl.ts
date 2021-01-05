@@ -161,7 +161,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
             });
         } catch (error) {
             console.log(error);
-            callback({code: grpc.status.NOT_FOUND, message: `not found ${parameters.request.address}`});
+            callback({ code: grpc.status.INTERNAL, message: `an error occurred trying to register address ${parameters.request.address}` });
         }
     }
 
