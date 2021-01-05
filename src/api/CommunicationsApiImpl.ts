@@ -49,7 +49,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
             callback(null, {});
         } catch (error) {
             console.log(error);
-            callback({code: grpc.status.NOT_FOUND, message: `not subscribed to ${subscription.topic.address}` });
+            callback({code: grpc.status.NOT_FOUND, message: `not subscribed to ${subscription.topic.address}`});
         }
     }
 
@@ -110,14 +110,11 @@ class CommunicationsApiImpl implements CommunicationsApi {
             const topic = peer.createTopic(call.request.topic.address);
             topic?.subscribe(call.request.subscriber.address, call)
         } catch (e) {
-            call.write({
-                subscribeError: {
-                    channel: {
-                        channelId: ""
-                    },
-                    reason: e.message
-                }
+            call.emit('error', {
+                code: grpc.status.UNKNOWN,
+                message: e.message
             });
+            call.end();
         }
     }
 
@@ -137,11 +134,11 @@ class CommunicationsApiImpl implements CommunicationsApi {
                 }
             });
         } catch (e) {
-            call.write({
-                subscribeError: {
-                    reason: `Address ${call.request.topic.address} not found`
-                }
-            })
+            call.emit('error', {
+                code: grpc.status.NOT_FOUND,
+                message: `Address ${call.request.topic.address} not found`
+            });
+            call.end();
         }
     }
 
@@ -185,7 +182,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
         console.log(`publishing ${parameters.request.message.payload} in topic ${parameters.request.topic.channelId} `)
         const peer = this.peerService.create(parameters.request.topic.channelId);
         peer.publish({content: parameters.request.message.payload});
-        callback(null,{});
+        callback(null, {});
     }
 
     async sendMessage(parameters: any, callback: any): Promise<void> {
