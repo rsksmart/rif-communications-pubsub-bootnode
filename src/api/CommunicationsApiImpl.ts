@@ -1,5 +1,5 @@
 /* eslint no-console: 0 */
-import {DirectChat, DirectMessage} from '@rsksmart/rif-communications-pubsub'
+import {DirectChat} from '@rsksmart/rif-communications-pubsub'
 import {retry} from '@lifeomic/attempt';
 import DhtService from "../service/DHTService";
 import grpc from 'grpc';
@@ -7,7 +7,8 @@ import EncodingService from "../service/EncodingService";
 import CommunicationsApi from "./CommunicationsApi";
 import PeerService from "../service/PeerService";
 import RskSubscription from "../dto/RskSubscription";
-import {ethers} from "ethers";
+import {validateAddress} from "../util/rsk";
+import ApiError from "../errors/ApiError";
 
 class CommunicationsApiImpl implements CommunicationsApi {
 
@@ -21,14 +22,21 @@ class CommunicationsApiImpl implements CommunicationsApi {
 
     async IsSubscribedToRskAddress({request: subscription}: { request: RskSubscription }, callback: any): Promise<void> {
         console.log("IsSubscribedToRskAddress", subscription)
+        const { subscriber, topic } = subscription;
         try {
+            validateAddress(subscriber.address);
+            validateAddress(topic.address);
             const peerId = await this.dht.getPeerIdByRskAddress(subscription.topic.address);
             callback(null, {
                 value: this.peerService.get(peerId)
                     ?.getTopic(subscription.topic.address)
                     ?.hasSubscriber(subscription.subscriber.address)
             });
-        } catch (error) {
+        } catch (e) {
+            if (e instanceof ApiError) {
+                callback(e);
+                return;
+            }
             callback(null, {value: false});
         }
     }
@@ -139,13 +147,8 @@ class CommunicationsApiImpl implements CommunicationsApi {
     */
     async connectToCommunicationsNode(parameters: any, callback: any) {
         console.log("connectToCommunicationsNode", JSON.stringify(parameters.request));
-        if (!ethers.utils.isAddress(parameters.request.address.toLowerCase())) {
-            callback({
-                code: grpc.status.INVALID_ARGUMENT,
-                message: `${parameters.request.address} is not a valid RSK address`
-            });
-        }
         try {
+            validateAddress(parameters.request.address);
             await retry(async (context) => {
                 await this.dht.addRskAddressPeerId(parameters.request.address, this.peerId._idB58String)
             }, {
@@ -156,8 +159,12 @@ class CommunicationsApiImpl implements CommunicationsApi {
                 notification: Buffer.from('OK', 'utf8'),
                 payload: Buffer.from('connection established', 'utf8')
             });
-        } catch (error) {
-            console.log(error);
+        } catch (e) {
+            console.log(e);
+            if (e instanceof ApiError) {
+                callback(e);
+                return;
+            }
             callback({ code: grpc.status.INTERNAL, message: `an error occurred trying to register address ${parameters.request.address}` });
         }
     }
