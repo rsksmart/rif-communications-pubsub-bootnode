@@ -19,6 +19,7 @@
     }
   },
   authorization: {
+    enabled: 'RIFC_AUTH_ENABLED',
     expiresIn: 'RIFC_AUTH_TOKEN_EXPIRES_IN',
     secret: 'RIFC_AUTH_TOKEN_SECRET',
     challengeSize: 'RIFC_AUTH_CHALLENGE_SIZE'
