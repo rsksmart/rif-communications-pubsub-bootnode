@@ -36,21 +36,12 @@ class CommunicationsApiImpl implements CommunicationsApi {
     async closeTopicWithRskAddress({request: subscription}: any, callback: any): Promise<void> {
         console.log(`closeTopic ${JSON.stringify(subscription)} `)
         try {
-            const {subscriber} = subscription;
             const peerId = await this.dht.getPeerIdByRskAddress(subscription.topic.address);
-            const peer = this.peerService.get(peerId);
-            const topic = peer?.getTopic(subscription.topic.address);
-            if (!topic) {
-                throw new Error("Topic not found");
-            }
-            topic?.unsubscribe(subscriber.address);
-            if (!topic?.hasSubscribers()) {
-                peer?.deleteTopic(subscription.topic.address);
-            }
+            this.peerService.unsubscribeFromTopic(peerId, subscription);
             callback(null, {});
-        } catch (error) {
-            console.log(error);
-            callback({code: grpc.status.NOT_FOUND, message: `not subscribed to ${subscription.topic.address}`});
+        } catch (e) {
+            console.log(e);
+            callback(e);
         }
     }
 
