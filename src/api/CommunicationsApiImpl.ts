@@ -69,12 +69,14 @@ class CommunicationsApiImpl implements CommunicationsApi {
                 sender: {address: senderAddress},
                 message: {payload}
             } = request;
+            validateAddress(senderAddress);
+            validateAddress(receiverAddress);
             const peerId = await this.dht.getPeerIdByRskAddress(receiverAddress);
             const peer = this.peerService.create(peerId);
             await peer.publish({content: payload, receiver: receiverAddress, sender: senderAddress});
             callback(null, {});
         } catch (e) {
-            callback({code: grpc.status.NOT_FOUND, message: "not found"}, {});
+            callback(e);
         }
 
     }
