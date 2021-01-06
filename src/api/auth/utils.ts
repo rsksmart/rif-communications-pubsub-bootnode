@@ -5,8 +5,9 @@ import grpc from 'grpc'
 import { loggingFactory } from '../../logger'
 
 type GRPCApiHandler = (...args: any[]) => void
+type GRPCApi = Record<string, GRPCApiHandler>
 
-const logger = loggingFactory('authorization')
+const logger = loggingFactory('auth:utils')
 
 export const isAuthorized = (call: any): boolean => {
   if (!call.metadata.get('authorization')) {
@@ -55,4 +56,27 @@ export const secureRoute = (handler: GRPCApiHandler) => async (...args: any) => 
   }
 
   await handler(...args)
+}
+
+/**
+ * Apply auth for API handlers
+ * @param api Object with API handlers
+ * @param publicAPIs array of public routes
+ */
+export const secureAPI = (
+    api: GRPCApi,
+    publicAPIs = ['createChallenge', 'auth']
+): GRPCApi => {
+  if (!config.get('authorization.enabled')) {
+    return api
+  }
+  return Object
+      .entries(api)
+      .reduce<GRPCApi>(
+          (acc, [route, handler]) => ({
+            ...acc,
+            [route]: publicAPIs.includes(route) ? handler : secureRoute(handler)
+          }),
+          {}
+      )
 }

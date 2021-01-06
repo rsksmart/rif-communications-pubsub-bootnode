@@ -3,7 +3,7 @@ import config from 'config'
 import { DirectChat } from '@rsksmart/rif-communications-pubsub'
 
 import { authorizationHandler, createChallengeHandler } from './api/auth/handler'
-import { secureRoute } from './api/auth/utils'
+import { secureAPI } from './api/auth/utils'
 import libP2PFactory from './service/LibP2PFactory'
 import DhtService from './service/DHTService'
 import EncodingService from './service/EncodingService'
@@ -84,30 +84,30 @@ async function getApi (): Promise<CommunicationsApi> {
  * @return {Server} The new server object
  */
 async function getServer () {
-  const api = await getApi()
-  // console.log(commsApi);
+  const apiService = await getApi()
   const server = new grpc.Server()
-  server.addService(commsApi.CommunicationsApi.service, {
-    connectToCommunicationsNode: secureRoute(api.connectToCommunicationsNode.bind(api)),
-    endCommunication: secureRoute(api.endCommunication.bind(api)),
-    subscribe: secureRoute(api.subscribe.bind(api)),
-    unsubscribe: secureRoute(api.unsubscribe.bind(api)),
-    publish: secureRoute(api.publish.bind(api)),
-    getSubscribers: secureRoute(api.getSubscribers.bind(api)),
-    hasSubscriber: secureRoute(api.hasSubscriber.bind(api)),
-    IsSubscribedToRskAddress: secureRoute(api.IsSubscribedToRskAddress.bind(api)),
-    sendMessage: secureRoute(api.sendMessage.bind(api)),
-    locatePeerId: secureRoute(api.locatePeerId.bind(api)),
-    createTopicWithPeerId: secureRoute(api.createTopicWithPeerId.bind(api)),
-    createTopicWithRskAddress: secureRoute(api.createTopicWithRskAddress.bind(api)),
-    closeTopicWithRskAddress: secureRoute(api.closeTopicWithRskAddress.bind(api)),
-    sendMessageToTopic: secureRoute(api.sendMessageToTopic.bind(api)),
-    sendMessageToRskAddress: secureRoute(api.sendMessageToRskAddress.bind(api)),
-    updateAddress: secureRoute(api.updateAddress.bind(api)),
+  const API = {
+    connectToCommunicationsNode: apiService.connectToCommunicationsNode.bind(apiService),
+    endCommunication: apiService.endCommunication.bind(apiService),
+    subscribe: apiService.subscribe.bind(apiService),
+    unsubscribe: apiService.unsubscribe.bind(apiService),
+    publish: apiService.publish.bind(apiService),
+    getSubscribers: apiService.getSubscribers.bind(apiService),
+    hasSubscriber: apiService.hasSubscriber.bind(apiService),
+    IsSubscribedToRskAddress: apiService.IsSubscribedToRskAddress.bind(apiService),
+    sendMessage: apiService.sendMessage.bind(apiService),
+    locatePeerId: apiService.locatePeerId.bind(apiService),
+    createTopicWithPeerId: apiService.createTopicWithPeerId.bind(apiService),
+    createTopicWithRskAddress: apiService.createTopicWithRskAddress.bind(apiService),
+    closeTopicWithRskAddress: apiService.closeTopicWithRskAddress.bind(apiService),
+    sendMessageToTopic: apiService.sendMessageToTopic.bind(apiService),
+    sendMessageToRskAddress: apiService.sendMessageToRskAddress.bind(apiService),
+    updateAddress: apiService.updateAddress.bind(apiService),
     createChallenge: createChallengeHandler,
     auth: authorizationHandler
-  })
+  }
 
+  server.addService(commsApi.CommunicationsApi.service, secureAPI(API))
   return server
 }
 

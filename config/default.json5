@@ -23,6 +23,7 @@
   displayPeerId: true,
 
   authorization: {
+    enabled: true,
     expiresIn: '1h',
     secret: '',
     challengeSize: 32

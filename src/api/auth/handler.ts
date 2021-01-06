@@ -4,7 +4,7 @@ import { loggingFactory } from '../../logger'
 import { createChallenge, removeChallengeForAddress, verifyChallenge } from '../../service/HandShake'
 import { generateToken } from './utils'
 
-const logger = loggingFactory('auth')
+const logger = loggingFactory('auth:handlers')
 
 /**
  * Generate 32 bytes challenge and store it for corresponding rsk address
