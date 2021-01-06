@@ -26,6 +26,20 @@ class PeerService {
         this.peers?.delete(peerId);
     }
 
+    subscribeToTopic(peerId: string, subscription: RskSubscription, stream: any) {
+        const peer = this.create(peerId);
+        const topic = peer.createTopic(subscription.topic.address);
+        topic?.subscribe(subscription.subscriber.address, stream)
+        stream.write({
+            channelPeerJoined: {
+                channel: {
+                    channelId: peerId
+                },
+                peerId: peerId
+            }
+        });
+    }
+
     unsubscribeFromTopic(peerId: string, subscription: RskSubscription) {
         const peer = this.get(peerId);
         const topic = peer?.getTopic(subscription.topic.address);

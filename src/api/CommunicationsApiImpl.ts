@@ -120,26 +120,15 @@ class CommunicationsApiImpl implements CommunicationsApi {
         }
     }
 
-    async createTopicWithRskAddress(call: any) {
+    async createTopicWithRskAddress(call: any ) {
         console.log(`createTopicWithRskAddress ${JSON.stringify(call.request)} `)
         try {
+            validateAddress(call.request.subscriber.address);
+            validateAddress(call.request.topic.address);
             const peerId = await this.dht.getPeerIdByRskAddress(call.request.topic.address);
-            const peer = this.peerService.create(peerId);
-            const topic = peer.createTopic(call.request.topic.address);
-            topic?.subscribe(call.request.subscriber.address, call)
-            call.write({
-                channelPeerJoined: {
-                    channel: {
-                        channelId: peerId
-                    },
-                    peerId: peerId
-                }
-            });
+            this.peerService.subscribeToTopic(peerId, call.request, call)
         } catch (e) {
-            call.emit('error', {
-                code: grpc.status.NOT_FOUND,
-                message: `Address ${call.request.topic.address} not found`
-            });
+            call.emit('error', e);
             call.end();
         }
     }

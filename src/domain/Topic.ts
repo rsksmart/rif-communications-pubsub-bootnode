@@ -11,9 +11,9 @@ class Topic {
 
     }
 
-    subscribe(subscriber: string, call: any) {
+    subscribe(subscriber: string, stream: any) {
         console.log(` - New subscription from ${subscriber} to ${this.id}`)
-        this.subscribers.set(subscriber, call);
+        this.subscribers.set(subscriber, stream);
     }
 
     receive(message: any) {
