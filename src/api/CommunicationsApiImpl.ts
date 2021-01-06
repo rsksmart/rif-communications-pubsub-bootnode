@@ -7,6 +7,7 @@ import EncodingService from "../service/EncodingService";
 import CommunicationsApi from "./CommunicationsApi";
 import PeerService from "../service/PeerService";
 import RskSubscription from "../dto/RskSubscription";
+import {ethers} from "ethers";
 
 class CommunicationsApiImpl implements CommunicationsApi {
 
@@ -146,8 +147,13 @@ class CommunicationsApiImpl implements CommunicationsApi {
         rpc ConnectToCommunicationsNode(NoParams) returns (stream Notification);
     */
     async connectToCommunicationsNode(parameters: any, callback: any) {
-        console.log("connectToCommunicationsNode", JSON.stringify(parameters.request))
-
+        console.log("connectToCommunicationsNode", JSON.stringify(parameters.request));
+        if (!ethers.utils.isAddress(parameters.request.address.toLowerCase())) {
+            callback({
+                code: grpc.status.INVALID_ARGUMENT,
+                message: `${parameters.request.address} is not a valid RSK address`
+            });
+        }
         try {
             await retry(async (context) => {
                 await this.dht.addRskAddressPeerId(parameters.request.address, this.peerId._idB58String)
@@ -161,7 +167,7 @@ class CommunicationsApiImpl implements CommunicationsApi {
             });
         } catch (error) {
             console.log(error);
-            callback({code: grpc.status.NOT_FOUND, message: `not found ${parameters.request.address}`});
+            callback({ code: grpc.status.INTERNAL, message: `an error occurred trying to register address ${parameters.request.address}` });
         }
     }
 
