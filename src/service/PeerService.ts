@@ -1,5 +1,8 @@
 import Libp2p from "libp2p";
 import Peer from "../domain/Peer";
+import RskSubscription from "../dto/RskSubscription";
+import ApiError from "../errors/ApiError";
+import {status} from "grpc";
 
 class PeerService {
 
@@ -21,6 +24,35 @@ class PeerService {
 
     delete(peerId: string) {
         this.peers?.delete(peerId);
+    }
+
+    subscribeToTopic(peerId: string, subscription: RskSubscription, stream: any) {
+        const peer = this.create(peerId);
+        const topic = peer.createTopic(subscription.topic.address);
+        topic?.subscribe(subscription.subscriber.address, stream)
+        stream.write({
+            channelPeerJoined: {
+                channel: {
+                    channelId: peerId
+                },
+                peerId: peerId
+            }
+        });
+    }
+
+    unsubscribeFromTopic(peerId: string, subscription: RskSubscription) {
+        const peer = this.get(peerId);
+        const topic = peer?.getTopic(subscription.topic.address);
+        if (!topic || !topic.hasSubscriber(subscription.subscriber.address)) {
+            throw new ApiError(
+                `not subscribed to ${subscription.topic.address}`,
+                status.FAILED_PRECONDITION
+            );
+        }
+        topic?.unsubscribe(subscription.subscriber.address);
+        if (!topic?.hasSubscribers()) {
+            peer?.deleteTopic(subscription.topic.address);
+        }
     }
 }
 
