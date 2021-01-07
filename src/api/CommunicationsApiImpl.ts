@@ -91,15 +91,15 @@ class CommunicationsApiImpl implements CommunicationsApi {
     async locatePeerId(parameters: any, callback: any): Promise<void> {
         let status: any = null;
         let response: any = {};
-
+        const { address } = parameters.request;
         try {
-            console.log(`locatePeerID ${JSON.stringify(parameters.request.address)} `)
-            const address = await this.dht.getPeerIdByRskAddress(parameters.request.address);
-            response = {address: address};
+            validateAddress(address)
+            console.log(`locatePeerID ${JSON.stringify(address)}`)
+            const peerId = await this.dht.getPeerIdByRskAddress(address);
+            callback(null, { address: peerId });
         } catch (e) {
-            status = {code: grpc.status.NOT_FOUND, message: "not found"}
+            callback(e);
         }
-
 
         callback(status, response);
 
