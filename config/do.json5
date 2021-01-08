@@ -10,7 +10,7 @@
       peerDiscovery: {
         bootstrap: {
           enabled: true,
-          list: ["/ip4/178.62.41.176/tcp/6020/p2p/16Uiu2HAm5X3dQ5rimQhbPYJAkXr14qWd2w9yEmfdHXZRc7jX9qCf" ],,
+          list: ["/ip4/178.62.41.176/tcp/6020/p2p/16Uiu2HAm5X3dQ5rimQhbPYJAkXr14qWd2w9yEmfdHXZRc7jX9qCf" ],
         }
       }
     }
