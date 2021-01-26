@@ -89,8 +89,6 @@ class CommunicationsApiImpl implements CommunicationsApi {
 
 
     async locatePeerId(parameters: any, callback: any): Promise<void> {
-        let status: any = null;
-        let response: any = {};
         const { address } = parameters.request;
         try {
             validateAddress(address)
@@ -100,9 +98,6 @@ class CommunicationsApiImpl implements CommunicationsApi {
         } catch (e) {
             callback(e);
         }
-
-        callback(status, response);
-
     }
 
     async createTopicWithPeerId(call: any) {

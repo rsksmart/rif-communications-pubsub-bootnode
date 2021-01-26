@@ -35,7 +35,7 @@ var commsApi = protoDescriptor.communicationsapi;
 async function getApi(): Promise<CommunicationsApi> {
     const libp2p = await libP2PFactory.fromConfig(config);
     const encoding = new EncodingService(encoder, decoder)
-    const dht = new DhtService(libp2p.contentRouting, encoding);
+    const dht = new DhtService(libp2p, encoding);
     const peerService = new PeerService(libp2p);
     const rooms = config.get('rooms') as Array<string>
     const directChat = DirectChat.getDirectChat(libp2p);

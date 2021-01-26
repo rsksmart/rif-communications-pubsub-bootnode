@@ -4,8 +4,12 @@ import ApiError from "../errors/ApiError";
 import {status} from "grpc";
 
 class DHTService {
-    constructor(private contentRouting: any,
+    contentRouting;
+    libp2p;
+    constructor(libp2p: any,
                 private encoding: EncodingService) {
+        this.contentRouting = libp2p.contentRouting;
+        this.libp2p = libp2p;
     }
 
     async addRskAddressPeerId(address: string, peerId: string): Promise<void> {
@@ -19,7 +23,10 @@ class DHTService {
         const encodedAddress = Buffer.from(this.encoding.encode(address));
         try {
             return await retry(async (context) => {
+                    console.log(`BEFORE: ${JSON.stringify(this.libp2p._dht.datastore.data)}`)
                     const val = await this.contentRouting.get(encodedAddress);
+                    console.log(`AFTER: ${JSON.stringify(this.libp2p._dht.datastore.data)}`)
+                    console.log(`FINALLY: ${JSON.stringify(this.libp2p._dht.datastore.data)}`)
                     return this.encoding.decode(val)
                 },
                 {
