@@ -31,15 +31,19 @@ class DHTService {
         }
         // Get first, as there is no "best" option
         const encodedPeerId = values[0];
+        const encodedAddress =  Buffer.from(this.encoding.encode(address));
+        this.libp2p._dht.put(encodedAddress, encodedPeerId).then(() => {
+            console.debug(`AFTER PUT: ${Object.keys(this.libp2p._dht.datastore.data).length}`);
+        });
         return this.encoding.decode(encodedPeerId);
     }
 
     private async fetchValuesByAddress(address: string, cant: number): Promise<Uint8Array[]> {
         try {
             const encodedAddress =  Buffer.from(this.encoding.encode(address));
-            console.debug(`BEFORE: ${JSON.stringify(this.libp2p._dht.datastore.data)}`);
+            console.debug(`BEFORE: ${Object.keys(this.libp2p._dht.datastore.data).length}`);
             const entries = (await this.libp2p._dht.getMany(encodedAddress, cant, {timeout: 30000})) as GetData[];
-            console.debug(`AFTER: ${JSON.stringify(this.libp2p._dht.datastore.data)}`);
+            console.debug(`AFTER: ${Object.keys(this.libp2p._dht.datastore.data).length}`);
             return entries.map(entry => entry.val);
         } catch (e) {
             console.error(e);
