@@ -25,7 +25,7 @@ After this, run `npm install` inside the cloned folder.
 
 ### Create a key for the RIF Communications bootnode
 
-1. Create the `config/keys/sample` folder.
+1. Create the `config/keys/lumino` folder.
 2. Execute the following commands inside this folder:
 
 ```
@@ -38,15 +38,42 @@ openssl pkcs8 -in ec_key.pem -topk8 -v2 aes-256-cbc -v2prf hmacWithSHA256 -outfo
 ``` 
 The latter one will require you to define a password.
 
-### Create a config file
+### Edit the private key configuration
 
 - go back to `config` folder
-- edit the `sample.json5` file. Modify the `key.password` value to your key's password
-- change the `key.privateKeyURLPath` to the config key path `[...]/config/keys/sample/ec_key_pkcs8_v2.der`
+- edit the `lumino.json5` file. Modify the `key.password` value to your key's password
+- change the `key.privateKeyURLPath` to the config key path `[...]/config/keys/lumino/ec_key_pkcs8_v2.der`
 
+
+### Configure the Bootstrap nodes
+
+In order to access the network, you need to connect to at least one node 
+that's are already in it. You can configure them using the the following parameters:
+
+```json5
+{
+  libp2p: {
+    config: {
+      peerDiscovery: {
+        bootstrap: {
+          // Enable bootstraping
+          enabled: true,
+          // list of nodes to connect by default
+          // e.g. Lumino Networkd bootstrap nodes
+          list: [
+            "/ip4/18.214.23.85/tcp/5011/p2p/16Uiu2HAmAxP26UzDG3drx1ikopjMYK6Zseyud9qJVoshZ5RgTowJ",
+            "/ip4/3.228.1.178/tcp/5011/p2p/16Uiu2HAm9Z9zSbXHHtSnjk2iCjnmBcb2ZXSA694jLCwAUUatqmGq",
+            "/ip4/18.206.56.242/tcp/5011/p2p/16Uiu2HAmRzgNWzwMivPCLRvLadbmLGPrymV8rxtBeq7PhndidQ6h"
+          ],
+        }
+      }
+    }
+  }
+}
+```
 ### Start the node
 
-- At root folder, run `NODE_ENV=sample npm run api-server`
+- At root folder, run `NODE_ENV=lumino npm run api-server`
 - You should see a log output similar to this one:
 
 ```
@@ -61,4 +88,28 @@ Listening on topics:
 
 PEERID: 16Uiu2HAmQswXYkmzDTgs2Em5JkhP8Y33CEhXQUHY3trctB1StTe7
 GRPC Server started on port 5013
+```
+
+## Additional settings
+
+### Exposing RIF Communications from a private IP address
+
+A RIF Communications node announces its address to the network, in other to be found by other peers.
+By default it announces the same IP as the one it's listening to.
+This might be a problem if your node runs behind a NAT, or just if its private IP doesn't match its public one.
+
+You can use the `addresses.announce` parameter to explicitly set the addresses you want to announce (e.g. your public address):
+```json5
+{
+  libp2p: {
+    addresses: {
+      ...
+      announce: [
+        "/ip4/<MY PUBLIC IP ADDRESS>/tcp/<PORT>"
+      ],
+    },
+    ...
+  },
+  ...
+}
 ```
