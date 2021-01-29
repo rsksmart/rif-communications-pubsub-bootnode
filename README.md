@@ -12,21 +12,26 @@
 
 # RIF Communications bootnode
 
-## Getting started:
+## Getting started
+
+### Prerequisites
 
 - Node 14+ (14.13 recommended)
 
 ### Get the code
 
-Download the code by executing `git clone https://github.com/rsksmart/rif-communications-pubsub-bootnode -b grpc-api`.
+Download the code by executing: 
+```
+    git clone https://github.com/rsksmart/rif-communications-pubsub-bootnode -b grpc-api
+```
 
 After this, run `npm install` inside the cloned folder.
 
 
 ### Create a key for the RIF Communications bootnode
 
-1. Create the `config/keys/lumino` folder.
-2. Execute the following commands inside this folder:
+1. Create the `config/keys/client` folder inside the cloned directory.
+2. Execute the following commands inside this new folder:
 
 ```
 openssl ecparam -genkey -name secp256k1 -out ecs_key.pem -param_enc explicit
@@ -40,15 +45,15 @@ The latter one will require you to define a password.
 
 ### Edit the private key configuration
 
-- go back to `config` folder
-- edit the `lumino.json5` file. Modify the `key.password` value to your key's password
-- change the `key.privateKeyURLPath` to the config key path `[...]/config/keys/lumino/ec_key_pkcs8_v2.der`
-
+1. Go back to the `config` folder
+2. Edit the `client.json5` file:
+    1. Modify the `key.password` value to your key's password
+    2. Change the `key.privateKeyURLPath` to the config key path `[...]/config/keys/client/ec_key_pkcs8_v2.der`
 
 ### Configure the Bootstrap nodes
 
-In order to access the network, you need to connect to at least one node 
-that's are already in it. You can configure them using the the following parameters:
+In order to access a network, you need to connect to at least one node 
+that's are already in it. You can configure these using the the following parameters:
 
 ```json5
 {
@@ -56,10 +61,10 @@ that's are already in it. You can configure them using the the following paramet
     config: {
       peerDiscovery: {
         bootstrap: {
-          // Enable bootstraping
+          // Enable bootstrapping
           enabled: true,
           // list of nodes to connect by default
-          // e.g. Lumino Networkd bootstrap nodes
+          // e.g. Lumino Network bootstrap nodes
           list: [
             "/ip4/18.214.23.85/tcp/5011/p2p/16Uiu2HAmAxP26UzDG3drx1ikopjMYK6Zseyud9qJVoshZ5RgTowJ",
             "/ip4/3.228.1.178/tcp/5011/p2p/16Uiu2HAm9Z9zSbXHHtSnjk2iCjnmBcb2ZXSA694jLCwAUUatqmGq",
@@ -73,9 +78,9 @@ that's are already in it. You can configure them using the the following paramet
 ```
 ### Start the node
 
-- At root folder, run `NODE_ENV=lumino npm run api-server`
-- You should see a log output similar to this one:
+At the project root folder, run `NODE_ENV=client npm run api-server`
 
+You should see a log output similar to this one:
 ```
 [INFO] 11:34:08 ts-node-dev ver. 1.1.1 (using ts-node ver. 9.1.1, typescript ver. 4.1.3)
 Loading encrypted DER key
