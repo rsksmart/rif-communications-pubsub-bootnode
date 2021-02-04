@@ -12,7 +12,7 @@
     createNew: false,
     password:"[your password here]",
     openSSL:true,
-    privateKeyURLPath:"file:////home/git/Desktop/rsk/rif-communications-pubsub-bootnode/config/keys/lumino/ec_key_pkcs8_v2.der",
+    privateKeyURLPath:"file:////home/git/Desktop/rsk/rif-communications-pubsub-bootnode/config/keys/client/ec_key_pkcs8_v2.der",
     type: "DER"
   },
   rooms: ["0xtestroom", "0xtestroom6", "0xtestroom3"],
