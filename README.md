@@ -48,12 +48,12 @@ The latter one will require you to define a password.
 1. Go back to the `config` folder
 2. Edit the `client.json5` file:
     1. Modify the `key.password` value to your key's password
-    2. Change the `key.privateKeyURLPath` to the config key path `[...]/config/keys/client/ec_key_pkcs8_v2.der`
+    2. Change the `key.privateKeyURLPath` to the config key path `[...]/config/keys/client/ec_key_pkcs8_v2.der` if needed.
 
 ### Configure the Bootstrap nodes
 
 In order to access a network, you need to connect to at least one node 
-that's are already in it. You can configure these using the the following parameters:
+that's are already in it. You can configure these adding the the following properties in client.json5 file:
 
 ```json5
 {
