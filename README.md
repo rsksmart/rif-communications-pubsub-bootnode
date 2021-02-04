@@ -34,7 +34,7 @@ After this, run `npm install` inside the cloned folder.
 2. Execute the following commands inside this new folder:
 
 ```
-openssl ecparam -genkey -name secp256k1 -out ecs_key.pem -param_enc explicit
+openssl ecparam -genkey -name secp256k1 -out ec_key.pem -param_enc explicit
 ``` 
 and then
 
