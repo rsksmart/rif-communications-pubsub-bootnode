@@ -22,7 +22,7 @@
 
 Download the code by executing: 
 ```
-    git clone https://github.com/rsksmart/rif-communications-pubsub-bootnode -b grpc-api
+git clone https://github.com/rsksmart/rif-communications-pubsub-bootnode -b grpc-api
 ```
 
 After this, run `npm install` inside the cloned folder.
