@@ -39,14 +39,6 @@ openssl ecparam -genkey -name secp256k1 -out ec_key.pem -param_enc explicit
 
 And then, to generete a DER file (will require you to define a password):
 
-In Linux or Windows:
-
-```
-openssl pkcs8 -in ec_key.pem -topk8 -v2 aes-256-cbc -v2prf hmacWithSHA256 -outform DER -out ec_key_pkcs8_v2.der
-``` 
-
-Or in Mac:
-
 ```
 openssl pkcs8 -in ec_key.pem -topk8 -v2 aes-256-cbc -outform DER -out ec_key_pkcs8_v2.der
 ``` 
