@@ -64,10 +64,10 @@ that's are already in it. You can configure these adding the the following prope
        peerDiscovery: {
         bootstrap: {
           // Enable bootstrapping
-           enabled: true,
+          enabled: true,
           // list of nodes to connect by default
           // e.g. Lumino Network bootstrap nodes
-           list: [
+          list: [
             "/ip4/18.214.23.85/tcp/5011/p2p/16Uiu2HAmAxP26UzDG3drx1ikopjMYK6Zseyud9qJVoshZ5RgTowJ",
             "/ip4/3.228.1.178/tcp/5011/p2p/16Uiu2HAm9Z9zSbXHHtSnjk2iCjnmBcb2ZXSA694jLCwAUUatqmGq",
             "/ip4/18.206.56.242/tcp/5011/p2p/16Uiu2HAmRzgNWzwMivPCLRvLadbmLGPrymV8rxtBeq7PhndidQ6h"
