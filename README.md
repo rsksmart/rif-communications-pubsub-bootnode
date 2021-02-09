@@ -36,12 +36,21 @@ After this, run `npm install` inside the cloned folder.
 ```
 openssl ecparam -genkey -name secp256k1 -out ec_key.pem -param_enc explicit
 ``` 
-and then
+
+And then, to generete a DER file (will require you to define a password):
+
+In Linux or Windows:
 
 ```
 openssl pkcs8 -in ec_key.pem -topk8 -v2 aes-256-cbc -v2prf hmacWithSHA256 -outform DER -out ec_key_pkcs8_v2.der
 ``` 
-The latter one will require you to define a password.
+
+Or in Mac:
+
+```
+openssl pkcs8 -in ec_key.pem -topk8 -v2 aes-256-cbc -outform DER -out ec_key_pkcs8_v2.der
+``` 
+
 
 ### Edit the private key configuration
 
@@ -58,21 +67,23 @@ that's are already in it. You can configure these adding the the following prope
 ```json5
 {
   libp2p: {
-    config: {
-      peerDiscovery: {
+     ...
+     config: {
+       peerDiscovery: {
         bootstrap: {
           // Enable bootstrapping
-          enabled: true,
+           enabled: true,
           // list of nodes to connect by default
           // e.g. Lumino Network bootstrap nodes
-          list: [
+           list: [
             "/ip4/18.214.23.85/tcp/5011/p2p/16Uiu2HAmAxP26UzDG3drx1ikopjMYK6Zseyud9qJVoshZ5RgTowJ",
             "/ip4/3.228.1.178/tcp/5011/p2p/16Uiu2HAm9Z9zSbXHHtSnjk2iCjnmBcb2ZXSA694jLCwAUUatqmGq",
             "/ip4/18.206.56.242/tcp/5011/p2p/16Uiu2HAmRzgNWzwMivPCLRvLadbmLGPrymV8rxtBeq7PhndidQ6h"
           ],
-        }
-      }
-    }
+        },
+      },
+    },
+    ...
   }
 }
 ```
@@ -112,6 +123,7 @@ You can use the `addresses.announce` parameter to explicitly set the addresses y
       announce: [
         "/ip4/<MY PUBLIC IP ADDRESS>/tcp/<PORT>"
       ],
+       ...
     },
     ...
   },
