@@ -44,6 +44,8 @@ class CommunicationsApiImpl implements CommunicationsApi {
     async closeTopicWithRskAddress({request: subscription}: any, callback: any): Promise<void> {
         console.log(`closeTopic ${JSON.stringify(subscription)} `)
         try {
+            validateAddress(subscription.topic.address);
+            validateAddress(subscription.subscriber.address);
             const peerId = await this.dht.getPeerIdByRskAddress(subscription.topic.address);
             this.peerService.unsubscribeFromTopic(peerId, subscription);
             callback(null, {});
