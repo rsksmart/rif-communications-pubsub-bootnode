@@ -102,9 +102,6 @@ class CommunicationsApiImpl implements CommunicationsApi {
         } catch (e) {
             callback(e);
         }
-
-        callback(status, response);
-
     }
 
     async createTopicWithPeerId(call: any) {

@@ -10,97 +10,115 @@
 ![](https://img.shields.io/badge/npm-%3E%3D6.0.0-orange.svg?style=flat-square)
 ![](https://img.shields.io/badge/Node.js-%3E%3D10.0.0-orange.svg?style=flat-square)
 
-> Simple boot node for RIF Communications PubSub
+# RIF Communications bootnode
 
-The aim to provide a libp2p node which serves as bootstrap node for projects which use [`rif-commmunications-pubsub`](https://github.com/rsksmart/rif-communications-pubsub). 
+## Getting started
 
-This can be also used for local development where you can define the list of Rooms that will be listened on and messages printed out to STDOUT.
+### Prerequisites
 
-## Table of Contents
+- Node 14+ (14.13 recommended)
 
-- [RIF Communications PubSub node](#rif-communications-pubsub-node)
-  - [Table of Contents](#table-of-contents)
-  - [Usage](#usage)
-  - [Config](#config)
-  - [Docker](#docker)
-  - [License](#license)
+### Get the code
 
-## Usage
-
-Example of usage:
-
+Download the code by executing: 
 ```
-npm start
+git clone https://github.com/rsksmart/rif-communications-pubsub-bootnode -b grpc-api
 ```
 
-Spawns a new libp2p node with new PeerId listening to TCP connections on port 6030.
+After this, run `npm install` inside the cloned folder.
+
+
+### Create a key for the RIF Communications bootnode
+
+1. Create the `config/keys/client` folder inside the cloned directory.
+2. Execute the following commands inside this new folder:
 
 ```
-NODE_ENV=develop npm start
-```
+openssl ecparam -genkey -name secp256k1 -out ec_key.pem -param_enc explicit
+``` 
 
-Spawns a new libp2p node with PeerId `QmbQJ4FyVBAar7rLwc1jjeJ6Nba6w2ddqczamJL6vTDrwm` listening to websocket connections on port 6030 and joins rooms `0xtestroom` and `0xtestroom2`. Any peers joining and leaving the room will be logged as well as any messages in th following format:
-
-```
-<roomName>: peer <peerId> joined
-<roomName>: peer <peerId> left
-<roomName>: message {from: <peerId>, data: <content of the message>}
-<roomName>: message {from: <peerId>, data: <content of the message>, to: <peerId>} // Only for direct messages
-```
-
-## Config
-
-In `./config`. You can switch between configurations by setting `NODE_ENV` variable. Local configuration is good to put to `local.json5` file. For configuration mechanism please visit the [node-config](https://github.com/lorenwest/node-config/) page.
-
-```JSON5
-// Libp2p config
-libp2p: {},
-
-// Peer ID in a JSON format
-peerId: {},
-
-// Rooms to subscribe to, strings
-rooms: []
-```
-
-## Docker
-* Build Docker
-  * docker build --tag pubsub:1.0 .
-* Run Docker
-    * docker run -p 6012:6012 -p 6010:6010 -p 6011:6011 -d pubsub:1.0
-* Private key is used from ./docker config and ./docker/config/keys
-* Logs
-    * docker ps for container **ID**
-    * docker logs -f **ID**
-* Stop Docker
-    * docker ps for container **ID**
-    * docker rm **ID** -f
-* Keys created with OpenSSL
-  * `openssl ecparam -genkey -name secp256k1 -out ec_key.pem -param_enc explicit`
-  * `openssl pkcs8 -in ec_key.pem -topk8 -v2 aes-256-cbc -v2prf hmacWithSHA256 -outform DER -out ec_key_pkcs8_v2.der`
-  * Placed in ./docker/keys
-  * modified development_node0.json5 with correct key and file
-  * DO NOT USE FOR PROD TEST KEYS IN THIS REPO, AS EXAMPLE ONLY
-### Supported env. variables
-
- - `RIFC_ROOMS` (json/array): same as `rooms` option
- - `RIFC_LISTEN_ADDR` (json/array): same as `libp2p.address.listen`
- - `RIFC_PEER_ID` (json): Peer ID JSON like specified in [`js-peer-id](https://github.com/libp2p/js-peer-id#createfromjsonobj)
-
-## Deployment
-
-This project can be deployed with Dockerfile bundled with this repo. Ports 6666 and 6667 have to be published.
-Also if this is deployed on production level stable PeerId should be used. If PeerId is not defined than over restarts it 
-will change, which should not happen for production boot nodes. 
-
-You can generate one using `npm run generate-peerid` and then set that either with config file or `RIFC_PEER_ID` env. variable (set the variable as the whole generated JSON).
+And then, to generete a DER file (will require you to define a password):
 
 ```
-$ PEER_ID=$(npm run generate-peerid) // This should be stored in some file somewhere
-$ docker build -t rif-comunication-bootnode .  
-$ docker run -e RIFC_PEER_ID="$PEER_ID" -p 6666 -p 6667 -it rif-comunication-bootnode  
+openssl pkcs8 -in ec_key.pem -topk8 -v2 aes-256-cbc -outform DER -out ec_key_pkcs8_v2.der
+``` 
+
+
+### Edit the private key configuration
+
+1. Go back to the `config` folder
+2. Edit the `client.json5` file:
+    1. Modify the `key.password` value to your key's password
+    2. Change the `key.privateKeyURLPath` to the config key path `[...]/config/keys/client/ec_key_pkcs8_v2.der` if needed.
+
+### Configure the Bootstrap nodes
+
+In order to access a network, you need to connect to at least one node 
+that's are already in it. You can configure these adding the the following properties in client.json5 file:
+
+```json5
+{
+  libp2p: {
+     ...
+     config: {
+       peerDiscovery: {
+        bootstrap: {
+          // Enable bootstrapping
+          enabled: true,
+          // list of nodes to connect by default
+          // e.g. Lumino Network bootstrap nodes
+          list: [
+            "/ip4/18.214.23.85/tcp/5011/p2p/16Uiu2HAmAxP26UzDG3drx1ikopjMYK6Zseyud9qJVoshZ5RgTowJ",
+            "/ip4/3.228.1.178/tcp/5011/p2p/16Uiu2HAm9Z9zSbXHHtSnjk2iCjnmBcb2ZXSA694jLCwAUUatqmGq",
+            "/ip4/18.206.56.242/tcp/5011/p2p/16Uiu2HAmRzgNWzwMivPCLRvLadbmLGPrymV8rxtBeq7PhndidQ6h"
+          ],
+        },
+      },
+    },
+    ...
+  }
+}
+```
+### Start the node
+
+At the project root folder, run `NODE_ENV=client npm run api-server`
+
+You should see a log output similar to this one:
+```
+[INFO] 11:34:08 ts-node-dev ver. 1.1.1 (using ts-node ver. 9.1.1, typescript ver. 4.1.3)
+Loading encrypted DER key
+Node started, listening on addresses:
+/ip4/127.0.0.1/tcp/5011/p2p/16Uiu2HAmQswXYkmzDTgs2Em5JkhP8Y33CEhXQUHY3trctB1StTe7
+/ip4/127.0.0.1/tcp/5012/ws/p2p/16Uiu2HAmQswXYkmzDTgs2Em5JkhP8Y33CEhXQUHY3trctB1StTe7
+
+Listening on topics: 
+
+
+PEERID: 16Uiu2HAmQswXYkmzDTgs2Em5JkhP8Y33CEhXQUHY3trctB1StTe7
+GRPC Server started on port 5013
 ```
 
-## License
+## Additional settings
 
-[MIT](./LICENSE)
+### Exposing RIF Communications from a private IP address
+
+A RIF Communications node announces its address to the network, in other to be found by other peers.
+By default it announces the same IP as the one it's listening to.
+This might be a problem if your node runs behind a NAT, or just if its private IP doesn't match its public one.
+
+You can use the `addresses.announce` parameter to explicitly set the addresses you want to announce (e.g. your public address):
+```json5
+{
+  libp2p: {
+    addresses: {
+      ...
+      announce: [
+        "/ip4/<MY PUBLIC IP ADDRESS>/tcp/<PORT>"
+      ],
+       ...
+    },
+    ...
+  },
+  ...
+}
+```
