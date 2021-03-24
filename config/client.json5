@@ -5,6 +5,13 @@
         "/ip4/127.0.0.1/tcp/6010",
         "/ip4/127.0.0.1/tcp/6011/ws"
       ]
+    },
+    config: {
+      peerDiscovery: {
+        mdns: {
+         enabled: false
+        }
+      }
     }
   },
   loadPrivKeyFromFile: true,
